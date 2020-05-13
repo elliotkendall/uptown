@@ -306,12 +306,14 @@ class App extends React.Component {
 
   render() {
     if (this.state.gameid == null) {
+      // We need to create/join a game
       return (
         <div className="App">
           <CreateInterface onClick={this.createHandler}/>
         </div>
       );    
     } else if ('board' in this.state) {
+      // Render the game board
       var opponents = [];
       var captured = [];
       var myplayernum = -1;
@@ -344,11 +346,16 @@ class App extends React.Component {
         </div>
       );
     } else if ('players' in this.state) {
+      // Waiting to start the game
       return (
         <JoinInterface players={this.state.players}
          join={this.joinGame}
          startGame={this.startGame}
          />
+      );
+    } else if ('message' in this.state) {
+      return (
+        <span>{this.state.message}</span>
       );
     } else {
       return(<div className="loader">Loading...</div>);
