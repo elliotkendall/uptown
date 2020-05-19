@@ -7,6 +7,10 @@
 
 }
 
+span#error, form#join, input#startbutton {
+  margin-top: 2%;
+}
+
 div#rack div.highlighted {
   border: double;
 }
