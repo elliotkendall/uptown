@@ -3,7 +3,7 @@ import boto3
 import os
 
 class DebugMessenger:
-  def send_message(self, message):
+  def send_message(self, message, cid=None):
     print('WebSocket: ' + str(message))
   
   def error(self, message):
@@ -32,7 +32,7 @@ def get_game_state(gid, s3):
   return json.loads(obj['Body'].read().decode())
 
 def create_game(gid, s3):
-  data = {'players': {}, 'watchers': []}
+  data = {'players': {}, 'watchers': {}}
   update_game(data, gid, s3)
   return data
 
@@ -118,25 +118,35 @@ def valid_capture(location, board):
     return True
   return False
 
-def prepare_player_state(state, mycid):
+def prepare_player_state(state, myat):
   ret = {'players': {}}
   if 'board' in state:
     ret['board'] = state['board']
     ret['nextplayer'] = state['nextplayer']
   
-  for cid in state['players']:
-    ret['players'][state['players'][cid]['playernum']] = {'name': state['players'][cid]['name']}
-    if 'captured' in state['players'][cid]:
-      ret['players'][state['players'][cid]['playernum']]['captured'] = state['players'][cid]['captured']
-    if cid == mycid and 'rack' in state['players'][cid]:
-      ret['rack'] = state['players'][cid]['rack']
-      ret['players'][state['players'][cid]['playernum']]['self'] = True
-    
+  for authtoken in state['players']:
+    ret['players'][state['players'][authtoken]['playernum']] = {'name': state['players'][authtoken]['name']}
+    if 'captured' in state['players'][authtoken]:
+      ret['players'][state['players'][authtoken]['playernum']]['captured'] = state['players'][authtoken]['captured']
+    if authtoken == myat:
+      ret['players'][state['players'][authtoken]['playernum']]['self'] = True
+      if 'rack' in state['players'][authtoken]:
+        ret['rack'] = state['players'][authtoken]['rack']
   return ret
 
+def sync_authtoken(state, cid, authtoken, gameid, s3):
+  for type in ['players', 'watchers']:
+    for at in state[type]:
+      if at == authtoken:
+        if state[type][at]['cid'] != cid:
+          state[type][at]['cid'] = cid
+          update_game(state, gameid, s3)
+          print('Updated cid for authtoken ' + authtoken + ' to ' + cid)
+        return
+  
 def lambda_handler(event, context):
   if not event['requestContext']['eventType'] == 'MESSAGE':
-    print('Not a message, so not sending a response')  
+    print('Not a message, so not sending a response')
     return {'statusCode': 200}
   
   if 'debug' in event:
@@ -151,25 +161,26 @@ def lambda_handler(event, context):
   
   print('Body: ' + event['body'])
   message = json.loads(event['body'])
-  if not 'gameid' in message:
-    ws.error('gameid required')
-    return {'statusCode': 200}
-  if not 'action' in message:
-    ws.error('action required')
-    return {'statusCode': 200}
-    
+  for item in ['gameid', 'action', 'authtoken']:
+    if not item in message:
+      ws.error(item + ' required')
+      return {'statusCode': 200}
+  
   s3 = boto3.client('s3')
   gameid = message['gameid']
+  authtoken = message['authtoken']
   state = get_game_state(gameid, s3)
   if state == None:
     state = create_game(gameid, s3)
+    
+  sync_authtoken(state, cid, authtoken, gameid, s3)
   
   ### MOVE ###
   if message['action'] == 'move':
-    if not cid in state['players']:
+    if not authtoken in state['players']:
       ws.error('you are not in this game')
       return {'statusCode': 200}
-    if state['nextplayer'] != state['players'][cid]['playernum']:
+    if state['nextplayer'] != state['players'][authtoken]['playernum']:
       ws.error('it is not your turn')
       return {'statusCode': 200}
     if not 'tile' in message:
@@ -178,7 +189,7 @@ def lambda_handler(event, context):
     if not 'location' in message:
       ws.error('must specify a location')
       return {'statusCode': 200}
-    if not message['tile'] in state['players'][cid]['rack']:
+    if not message['tile'] in state['players'][authtoken]['rack']:
       ws.error('you do not have that tile')
       return {'statusCode': 200}
     if not valid_move(message['tile'], message['location']):
@@ -188,50 +199,65 @@ def lambda_handler(event, context):
     if str(message['location']) in state['board']:
       print('Looking for self capture')
       print(state['board'][str(message['location'])][0])
-      print(state['players'][cid]['playernum'])
-      if state['board'][str(message['location'])][0] == state['players'][cid]['playernum']:
+      print(state['players'][authtoken]['playernum'])
+      if state['board'][str(message['location'])][0] == state['players'][authtoken]['playernum']:
         ws.error('you cannot capture your own tile')
         return {'statusCode': 200}
       if not valid_capture(message['location'], state['board']):
         ws.error('capturing that tile would break up a group')
         return {'statusCode': 200}
-      state['players'][cid]['captured'].append(state['board'][message['location']])
+      state['players'][authtoken]['captured'].append(state['board'][message['location']])
     # Place the tile on the board
-    state['board'][message['location']] = [state['players'][cid]['playernum'], message['tile']]
+    state['board'][message['location']] = [state['players'][authtoken]['playernum'], message['tile']]
     # Remove the tile from the rack
-    state['players'][cid]['rack'].remove(message['tile'])
+    state['players'][authtoken]['rack'].remove(message['tile'])
     # If there are more tiles to draw, draw one
-    if len(state['players'][cid]['tiles']) > 0:
-      state['players'][cid]['rack'].append(state['players'][cid]['tiles'].pop())
+    if len(state['players'][authtoken]['tiles']) > 0:
+      state['players'][authtoken]['rack'].append(state['players'][authtoken]['tiles'].pop())
     # Advance to the next player
     state['nextplayer'] += 1
     if state['nextplayer'] > len(state['players']):
       state['nextplayer'] = 1
     # TODO - Check for end of game
     update_game(state, gameid, s3)
-    for pcid in state['players']:
-      ws.send_message(prepare_player_state(state, pcid), pcid)
+    for pat in state['players']:
+      ws.send_message(prepare_player_state(state, pat), state['players'][pat]['cid'])
     return {'statusCode': 200}
   ### JOIN ###
   elif message['action'] == 'join':
     print(state)
-    if cid in state['players']:
+    if authtoken in state['players']:
       ws.error('you are already in this game')
       return {'statusCode': 200}
-    if cid in state['watchers']:
-      state['watchers'].remove(cid)
-    state['players'][cid] = {'name': message['name'], 'playernum': len(state['players']) + 1}
+    if authtoken in state['watchers']:
+      del state['watchers'][authtoken]
+    state['players'][authtoken] = {
+      'name': message['name'],
+      'playernum': len(state['players']) + 1,
+      'cid': cid
+    }
     update_game(state, gameid, s3)
-    ws.send_message(prepare_player_state(state, cid))
-    for pcid in state['watchers'] + list(state['players']):
-      ws.send_message(prepare_player_state(state, pcid), pcid)
+    for type in ['watchers', 'players']:
+      for authtoken in state[type]:
+        ws.send_message(prepare_player_state(state, authtoken), state[type][authtoken]['cid'])
     return {'statusCode': 200}
   ### LEAVE ###
   elif message['action'] == 'leave':
+    if not authtoken in state['players']:
+      ws.error('you are not in this game')
+      return {'statusCode': 200}
+    # Remove as a player, add as a watcher
+    del state['players'][authtoken]
+    state['watchers'][authtoken] = {'cid': cid}
+    update_game(state, gameid, s3)
+    # Send notifications
+    for type in ['watchers', 'players']:
+      for authtoken in state[type]:
+        ws.send_message(prepare_player_state(state, authtoken), state[type]['cid'])
     return {'statusCode': 200}
   ### START ###
   elif message['action'] == 'start':
-    if not cid in state['players']:
+    if not authtoken in state['players']:
       ws.error('you are not in this game')
       return {'statusCode': 200}
     if 'board' in state:
@@ -241,25 +267,26 @@ def lambda_handler(event, context):
     del state['watchers']
     state['board'] = {}
     state['nextplayer'] = 1
-    for pcid in state['players']:
-      state['players'][pcid]['captured'] = []
-      state['players'][pcid]['tiles'] = shuffle_tiles()
-      state['players'][pcid]['rack'] = []
+    for pat in state['players']:
+      state['players'][pat]['captured'] = []
+      state['players'][pat]['tiles'] = shuffle_tiles()
+      state['players'][pat]['rack'] = []
       for i in range(5):
-        state['players'][pcid]['rack'].append(state['players'][pcid]['tiles'].pop())
+        state['players'][pat]['rack'].append(state['players'][pat]['tiles'].pop())
     update_game(state, gameid, s3)
-    for pcid in state['players']:
-      ws.send_message(prepare_player_state(state, pcid), pcid)
+    
+    for authtoken in state['players']:
+      ws.send_message(prepare_player_state(state, authtoken), state['players'][authtoken]['cid'])
     return {'statusCode': 200}
   ### GET ###
   elif message['action'] == 'get':
-    if 'board' in state and not cid in state['players']:
+    if 'board' in state and not authtoken in state['players']:
       ws.error('you are not in this game')
       return {'statusCode': 200}
-    if 'watchers' in state and cid not in state['watchers']:
-      state['watchers'].append(cid)
+    if 'watchers' in state and authtoken not in state['watchers'] and authtoken not in state['players']:
+      state['watchers'][authtoken] = {'cid': cid}
       update_game(state, gameid, s3)
-    ws.send_message(prepare_player_state(state, cid))
+    ws.send_message(prepare_player_state(state, authtoken), cid)
     return {'statusCode': 200}
   else:
     ws.error('unknown action')

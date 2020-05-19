@@ -1,6 +1,8 @@
 import React from 'react';
 import './App.css';
 import { w3cwebsocket as W3CWebSocket } from "websocket";
+import Cookies from 'universal-cookie';
+import { v4 as uuidv4 } from 'uuid';
 import * as config from './config.js';
 
 class Square extends React.Component {
@@ -186,7 +188,9 @@ class JoinInterface extends React.Component {
     for (const [playernum, attrs] of Object.entries(this.props.players)) {
       if ('self' in attrs) {
         hasSelf = 1;
-        players.push(<span key={playernum} className="player self">Player {playernum}: {attrs['name']} (YOU) <button>leave game</button></span>);
+        players.push(<span key={playernum} className="player self">Player {playernum}: {attrs['name']} (YOU)
+         <input type="button" id="leavebutton" value="leave game" onClick={this.props.leave} />
+        </span>);
       } else {
         players.push(<span key={playernum} className="player">Player {playernum}: {attrs['name']}</span>);
       }
@@ -198,10 +202,10 @@ class JoinInterface extends React.Component {
       </div>);
     }
     return (
-      <form>
+      <form id="join">
       <span>Waiting to start game...</span>
       {players}
-      <input type="button" value="Start game" onClick={this.props.startGame} />
+      <input type="button" id="startbutton" value="Start game" onClick={this.props.startGame} />
       </form>
     );
   }
@@ -210,14 +214,31 @@ class JoinInterface extends React.Component {
 
 class App extends React.Component {
   componentDidMount() {
+    const cookies = new Cookies();
+    var authtoken = cookies.get('authtoken');
+    if (! authtoken) {
+      authtoken = uuidv4();
+      cookies.set('authtoken', authtoken, { path: '/' });
+    }
+    this.setState({"authtoken": authtoken});
+
     this.wsclient = new W3CWebSocket(config.APIURL);
 
     this.wsclient.onopen = () => {
       console.log('WebSocket Client Connected');
       if (this.state.gameid !== null) {
-        this.wsclient.send(JSON.stringify({"gameid": this.state.gameid, "action": "get"}));
+        this.wsclient.send(JSON.stringify({
+          "gameid": this.state.gameid,
+          "authtoken": this.state.authtoken,
+          "action": "get"
+        }));
       }
     };
+    this.wsclient.onerror = (err) => {
+      console.log("Websocket error");
+      console.log(err);
+      this.setState({"message": "Error connecting to websocket"});
+    }
     this.wsclient.onmessage = (message) => {
       let data = JSON.parse(message.data);
       console.log("Received message");
@@ -243,6 +264,7 @@ class App extends React.Component {
 
     this.createHandler = this.createHandler.bind(this);
     this.joinGame = this.joinGame.bind(this);
+    this.leaveGame = this.leaveGame.bind(this);
     this.startGame = this.startGame.bind(this);
     this.playTile = this.playTile.bind(this);
     this.setHighlightedTile = this.setHighlightedTile.bind(this);
@@ -259,6 +281,7 @@ class App extends React.Component {
   startGame() {
     this.wsclient.send(JSON.stringify({
       "gameid": this.state.gameid,
+      "authtoken": this.state.authtoken,
       "action": "start"
     }));
   }
@@ -266,8 +289,17 @@ class App extends React.Component {
   joinGame() {
     this.wsclient.send(JSON.stringify({
       "gameid": this.state.gameid,
+      "authtoken": this.state.authtoken,
       "action": "join",
       "name": document.getElementById('joinname').value
+    }));
+  }
+
+  leaveGame() {
+    this.wsclient.send(JSON.stringify({
+      "gameid": this.state.gameid,
+      "authtoken": this.state.authtoken,
+      "action": "leave"
     }));
   }
 
@@ -282,6 +314,7 @@ class App extends React.Component {
     }
     var message = JSON.stringify({
       "gameid": this.state.gameid,
+      "authtoken": this.state.authtoken,
       "action": "move",
       "tile": tiles[0].textContent,
       "location": location
@@ -348,14 +381,19 @@ class App extends React.Component {
     } else if ('players' in this.state) {
       // Waiting to start the game
       return (
+        <div className="App">
         <JoinInterface players={this.state.players}
          join={this.joinGame}
+         leave={this.leaveGame}
          startGame={this.startGame}
          />
+        </div>
       );
     } else if ('message' in this.state) {
       return (
-        <span>{this.state.message}</span>
+        <div className="App">
+          <span id="error">{this.state.message}</span>
+        </div>
       );
     } else {
       return(<div className="loader">Loading...</div>);
