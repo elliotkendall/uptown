@@ -201,9 +201,14 @@ class JoinInterface extends React.Component {
         <input type="button" value="Join" onClick={this.props.join} />
       </div>);
     }
+    var message = null;
+    if (this.props.message !== "") {
+      message = <span>{this.props.message}</span>;
+    }
     return (
       <form id="join">
       <span>Waiting to start game...</span>
+      {message}
       {players}
       <input type="button" id="startbutton" value="Start game" onClick={this.props.startGame} />
       </form>
@@ -386,6 +391,7 @@ class App extends React.Component {
          join={this.joinGame}
          leave={this.leaveGame}
          startGame={this.startGame}
+         message={this.state.message}
          />
         </div>
       );
