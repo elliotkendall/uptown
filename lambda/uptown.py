@@ -80,10 +80,10 @@ def valid_move(tile, location):
   return False
 
 def valid_capture(location, board):
-  color = board[location][0]
+  color = board[str(location)][0]
   orth = []
   for i in [-9, -1, 1, 9]:
-    if location + i in board and board[location + i][0] == color:
+    if str(location + i) in board and board[str(location + i)][0] == color:
       orth.append(i)
 
   if len(orth) < 2:
@@ -92,7 +92,7 @@ def valid_capture(location, board):
 
   diag = []
   for i in [-10, -8, 8, 10]:
-    if location + i in board and board[location + i][0] == color:
+    if str(location + i) in board and board[str(location + i)][0] == color:
       diag.append(i)
 
   if len(orth) == 2:
@@ -123,6 +123,8 @@ def prepare_player_state(state, myat):
   if 'board' in state:
     ret['board'] = state['board']
     ret['nextplayer'] = state['nextplayer']
+  if 'message' in state:
+    ret['message'] = state['message']
   
   for authtoken in state['players']:
     ret['players'][state['players'][authtoken]['playernum']] = {'name': state['players'][authtoken]['name']}
@@ -136,6 +138,8 @@ def prepare_player_state(state, myat):
 
 def sync_authtoken(state, cid, authtoken, gameid, s3):
   for type in ['players', 'watchers']:
+    if not type in state:
+      continue
     for at in state[type]:
       if at == authtoken:
         if state[type][at]['cid'] != cid:
@@ -170,9 +174,14 @@ def lambda_handler(event, context):
   gameid = message['gameid']
   authtoken = message['authtoken']
   state = get_game_state(gameid, s3)
+  
+  
   if state == None:
     state = create_game(gameid, s3)
-    
+  elif 'gameover' in state:
+    ws.send_message(prepare_player_state(state, authtoken), cid)
+    return {'statusCode': 200}
+  
   sync_authtoken(state, cid, authtoken, gameid, s3)
   
   ### MOVE ###
@@ -206,7 +215,7 @@ def lambda_handler(event, context):
       if not valid_capture(message['location'], state['board']):
         ws.error('capturing that tile would break up a group')
         return {'statusCode': 200}
-      state['players'][authtoken]['captured'].append(state['board'][message['location']])
+      state['players'][authtoken]['captured'].append(state['board'][str(message['location'])])
     # Place the tile on the board
     state['board'][message['location']] = [state['players'][authtoken]['playernum'], message['tile']]
     # Remove the tile from the rack
@@ -219,6 +228,14 @@ def lambda_handler(event, context):
     if state['nextplayer'] > len(state['players']):
       state['nextplayer'] = 1
     # TODO - Check for end of game
+    gameover = True
+    for authtoken in state['players']:
+      if len(state['players'][authtoken]['rack']) == 5:
+        gameover = False
+        break
+    if gameover:
+      state['message'] = 'game over'
+      state['gameover'] = True
     update_game(state, gameid, s3)
     for pat in state['players']:
       ws.send_message(prepare_player_state(state, pat), state['players'][pat]['cid'])
@@ -228,6 +245,9 @@ def lambda_handler(event, context):
     print(state)
     if authtoken in state['players']:
       ws.error('you are already in this game')
+      return {'statusCode': 200}
+    if len(state['players']) > 4:
+      ws.error('this game is at capacity')
       return {'statusCode': 200}
     if authtoken in state['watchers']:
       del state['watchers'][authtoken]
@@ -262,6 +282,9 @@ def lambda_handler(event, context):
       return {'statusCode': 200}
     if 'board' in state:
       ws.error('game is already in progress')
+      return {'statusCode': 200}
+    if len(state['players']) < 3:
+      ws.error('minimum 3 players required')
       return {'statusCode': 200}
     
     del state['watchers']
