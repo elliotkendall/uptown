@@ -346,7 +346,9 @@ class App extends React.Component {
   }
 
   setHighlightedTile(tile) {
-    if ("highlighted" in this.state && this.state.highlighted) {
+    if ("highlighted" in this.state
+     && this.state.highlighted
+     && tile !== this.state.highlighted) {
       this.state.highlighted.unhighlight();
     }
     this.setState({"highlighted": tile});
@@ -398,7 +400,8 @@ class App extends React.Component {
           </div>
           <Board tiles={this.state.board} latest={latest} playTile={this.playTile} />
           <Message content={this.state.message} />
-          <Rack tiles={this.state.rack} playernum={myplayernum} setHighlight={this.setHighlightedTile} />
+          <Rack tiles={this.state.rack} playernum={myplayernum}
+           setHighlight={this.setHighlightedTile} />
           <Captured tiles={captured} />
         </div>
       );
