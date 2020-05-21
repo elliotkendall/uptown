@@ -2,22 +2,14 @@ import json
 import boto3
 import os
 
-class DebugMessenger:
-  def send_message(self, message, cid=None):
-    print('WebSocket: ' + str(message))
-  
-  def error(self, message):
-    self.send_message('Error: ' + message)
-    
 class WebSocketMessenger:
   def __init__(self, client, cid):
     self.client = client
     self.cid = cid
-    
+
   def send_message(self, message, cid=None):
     if cid is None:
       cid = self.cid
-    print('Sending to ' + cid + ':' + json.dumps(message))
     self.client.post_to_connection(Data=json.dumps(message).encode(), ConnectionId=cid)
 
   def error(self, message):
@@ -52,21 +44,21 @@ def valid_move(tile, location):
   # Dollar sign is wild
   if tile == '$':
     return True
-  
+
   # Number tiles
   try:
     numtile = int(tile)
     return (location % 9) + 1 == numtile
   except ValueError:
     pass
-  
+
   # Letter tiles
   lettertile = ord(tile)
   if between(lettertile, 65, 74):
     lettertile = lettertile - 65
     start = lettertile * 9
     return between(location, start, start+8)
-  
+
   # Symbol tiles
   quadrants = {'~': [0, 0], '!': [0, 1], '@': [0, 2], '#': [1, 0], '?': [1, 1], '%': [1, 2], '^': [2, 0], '&': [2, 1], '*': [2, 2]}
   if tile in quadrants:
@@ -76,14 +68,13 @@ def valid_move(tile, location):
     return (between(location, start, start + 2)
      or between(location, start + 9, start + 11)
      or between(location, start + 18, start + 20))
-  
   return False
 
 def valid_capture(location, board):
-  color = board[str(location)][0]
+  color = board[location][0]
   orth = []
   for i in [-9, -1, 1, 9]:
-    if str(location + i) in board and board[str(location + i)][0] == color:
+    if (location + i) in board and board[location + i][0] == color:
       orth.append(i)
 
   if len(orth) < 2:
@@ -92,7 +83,7 @@ def valid_capture(location, board):
 
   diag = []
   for i in [-10, -8, 8, 10]:
-    if str(location + i) in board and board[str(location + i)][0] == color:
+    if (location + i) in board and board[location + i][0] == color:
       diag.append(i)
 
   if len(orth) == 2:
@@ -125,7 +116,7 @@ def prepare_player_state(state, myat):
     ret['nextplayer'] = state['nextplayer']
   if 'message' in state:
     ret['message'] = state['message']
-  
+
   for authtoken in state['players']:
     ret['players'][state['players'][authtoken]['playernum']] = {}
     for item in ['name', 'last', 'captured']:
@@ -138,53 +129,53 @@ def prepare_player_state(state, myat):
   return ret
 
 def sync_authtoken(state, cid, authtoken, gameid, s3):
-  for type in ['players', 'watchers']:
-    if not type in state:
+  for ptype in ['players', 'watchers']:
+    if not ptype in state:
       continue
-    for at in state[type]:
+    for at in state[ptype]:
       if at == authtoken:
-        if state[type][at]['cid'] != cid:
-          state[type][at]['cid'] = cid
+        if state[ptype][at]['cid'] != cid:
+          state[ptype][at]['cid'] = cid
           update_game(state, gameid, s3)
           print('Updated cid for authtoken ' + authtoken + ' to ' + cid)
         return
-  
+
 def lambda_handler(event, context):
   if not event['requestContext']['eventType'] == 'MESSAGE':
-    print('Not a message, so not sending a response')
+    print('This event is not a message, so not sending a response. Probably indicates an API gateway misconfiguration.')
     return {'statusCode': 200}
-  
-  if 'debug' in event:
-    ws = DebugMessenger()
-    cid = 'debug'
-  else:
-    client = boto3.client("apigatewaymanagementapi",
-      endpoint_url = "https://" + event["requestContext"]["domainName"] +
-      "/" + event["requestContext"]["stage"])
-    cid = event["requestContext"].get("connectionId")
-    ws = WebSocketMessenger(client, cid)
-  
-  print('Body: ' + event['body'])
+
+  client = boto3.client("apigatewaymanagementapi",
+    endpoint_url = "https://" + event["requestContext"]["domainName"] +
+    "/" + event["requestContext"]["stage"])
+  cid = event["requestContext"].get("connectionId")
+  ws = WebSocketMessenger(client, cid)
+
   message = json.loads(event['body'])
   for item in ['gameid', 'action', 'authtoken']:
     if not item in message:
       ws.error(item + ' required')
       return {'statusCode': 200}
-  
+    if type(message[item]) != str:
+      ws.error(item + ' must be a string')
+      return {'statusCode': 200}
+    if len(message[item]) > 36:
+      ws.error(item + ' max length is 36')
+      return {'statusCode': 200}
+
   s3 = boto3.client('s3')
   gameid = message['gameid']
   authtoken = message['authtoken']
   state = get_game_state(gameid, s3)
-  
-  
+
   if state == None:
     state = create_game(gameid, s3)
   elif 'gameover' in state:
     ws.send_message(prepare_player_state(state, authtoken), cid)
     return {'statusCode': 200}
-  
+
   sync_authtoken(state, cid, authtoken, gameid, s3)
-  
+
   ### MOVE ###
   if message['action'] == 'move':
     # Sanity checks
@@ -197,8 +188,14 @@ def lambda_handler(event, context):
     if not 'tile' in message:
       ws.error('must specify a tile')
       return {'statusCode': 200}
+    if type(message['tile']) != str:
+      ws.error('tile must be a string')
+      return {'statusCode': 200}
     if not 'location' in message:
       ws.error('must specify a location')
+      return {'statusCode': 200}
+    if type(message['location'])!= int:
+      ws.error('location must be a number')
       return {'statusCode': 200}
     if not message['tile'] in state['players'][authtoken]['rack']:
       ws.error('you do not have that tile')
@@ -206,17 +203,17 @@ def lambda_handler(event, context):
     if not valid_move(message['tile'], message['location']):
       ws.error('that tile does not go there')
       return {'statusCode': 200}
-    
+
     # Handle capturing
-    if str(message['location']) in state['board']:
-      if state['board'][str(message['location'])][0] == state['players'][authtoken]['playernum']:
+    if message['location'] in state['board']:
+      if state['board'][message['location']][0] == state['players'][authtoken]['playernum']:
         ws.error('you cannot capture your own tile')
         return {'statusCode': 200}
       if not valid_capture(message['location'], state['board']):
         ws.error('capturing that tile would break up a group')
         return {'statusCode': 200}
       state['players'][authtoken]['captured'].append(state['board'][str(message['location'])])
-    
+
     # Place the tile on the board
     state['board'][message['location']] = [state['players'][authtoken]['playernum'], message['tile']]
 
@@ -229,12 +226,12 @@ def lambda_handler(event, context):
     # If there are more tiles to draw, draw one
     if len(state['players'][authtoken]['tiles']) > 0:
       state['players'][authtoken]['rack'].append(state['players'][authtoken]['tiles'].pop())
-    
+
     # Advance to the next player
     state['nextplayer'] += 1
     if state['nextplayer'] > len(state['players']):
       state['nextplayer'] = 1
-    
+
     # Check for end of game
     gameover = True
     for authtoken in state['players']:
@@ -245,29 +242,43 @@ def lambda_handler(event, context):
       state['message'] = 'game over'
       state['gameover'] = True
     update_game(state, gameid, s3)
+
     for pat in state['players']:
-      ws.send_message(prepare_player_state(state, pat), state['players'][pat]['cid'])
+      try:
+        ws.send_message(prepare_player_state(state, pat), state['players'][pat]['cid'])
+      except client.exceptions.GoneException:
+        print("CID " + state['players'][pat]['cid'] + " for authtoken " + pat + " has gone away. Probably a timeout.")
     return {'statusCode': 200}
   ### JOIN ###
   elif message['action'] == 'join':
-    print(state)
     if authtoken in state['players']:
       ws.error('you are already in this game')
       return {'statusCode': 200}
     if len(state['players']) > 4:
       ws.error('this game is at capacity')
       return {'statusCode': 200}
+    if not 'name' in message:
+      ws.error('must specify a name')
+      return {'statusCode': 200}
+    if type(message['name']) != str:
+      ws.error('name must be a string')
+      return {'statusCode': 200}
+    if len(message['name']) > 36:
+      name = message['name'][0:36]
+    else:
+      name = message['name']
+
     if authtoken in state['watchers']:
       del state['watchers'][authtoken]
     state['players'][authtoken] = {
-      'name': message['name'],
+      'name': name,
       'playernum': len(state['players']) + 1,
       'cid': cid
     }
     update_game(state, gameid, s3)
-    for type in ['watchers', 'players']:
-      for authtoken in state[type]:
-        ws.send_message(prepare_player_state(state, authtoken), state[type][authtoken]['cid'])
+    for ptype in ['watchers', 'players']:
+      for authtoken in state[ptype]:
+        ws.send_message(prepare_player_state(state, authtoken), state[ptype][authtoken]['cid'])
     return {'statusCode': 200}
   ### LEAVE ###
   elif message['action'] == 'leave':
@@ -279,9 +290,9 @@ def lambda_handler(event, context):
     state['watchers'][authtoken] = {'cid': cid}
     update_game(state, gameid, s3)
     # Send notifications
-    for type in ['watchers', 'players']:
-      for authtoken in state[type]:
-        ws.send_message(prepare_player_state(state, authtoken), state[type]['cid'])
+    for ptype in ['watchers', 'players']:
+      for authtoken in state[ptype]:
+        ws.send_message(prepare_player_state(state, authtoken), state[ptype]['cid'])
     return {'statusCode': 200}
   ### START ###
   elif message['action'] == 'start':
@@ -294,7 +305,7 @@ def lambda_handler(event, context):
     if len(state['players']) < 3:
       ws.error('minimum 3 players required')
       return {'statusCode': 200}
-    
+
     del state['watchers']
     state['board'] = {}
     state['nextplayer'] = 1
@@ -305,7 +316,7 @@ def lambda_handler(event, context):
       for i in range(5):
         state['players'][pat]['rack'].append(state['players'][pat]['tiles'].pop())
     update_game(state, gameid, s3)
-    
+
     for authtoken in state['players']:
       ws.send_message(prepare_player_state(state, authtoken), state['players'][authtoken]['cid'])
     return {'statusCode': 200}
@@ -322,4 +333,3 @@ def lambda_handler(event, context):
   else:
     ws.error('unknown action')
     return {'statusCode': 200}
-    
