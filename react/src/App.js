@@ -54,6 +54,9 @@ class Square extends React.Component {
     if (this.props.label === "true") {
       classes += " label";
     }
+    if ("latest" in this.props) {
+      classes += " latest";
+    }
     return (
       <div className={classes} onClick={clickHandler} >
         <div className="content">{this.props.symbol}</div>
@@ -71,28 +74,40 @@ class Board extends React.Component {
     ];
     var ret = [];
 
+    // Top labels
     ret.push(<Square key="blank1" label="true" symbol=" " />);
     for(let i=1;i<10;i++) ret.push(<Square key={i + 'top'} label="true" symbol={i} />);
     ret.push(<Square key="blank2" label="true" symbol=" " />);
 
     let id=0;
     for(let i=0; i<9; i++) {
+      // Left label
       ret.push(<Square label="true" key={String.fromCharCode(65+i) + '1'} symbol={String.fromCharCode(65+i)} />);
+
       for(let j=0;j<3;j++) {
         for(let k=0; k<3; k++) {
-          var s;
+          var props = {playTile: this.props.playTile, clickable: "play", id: id, key: id}
           if (id in this.props.tiles) {
-            s = (<Square playTile={this.props.playTile} clickable="play" id={id} key={id} symbol={this.props.tiles[id][1]} player={this.props.tiles[id][0]} />);
+            // Tile
+            props.symbol = this.props.tiles[id][1];
+            props.player = this.props.tiles[id][0];
+            if (this.props.latest.includes(id)) {
+              props.latest = true;
+            }
           } else {
-            s = (<Square playTile={this.props.playTile} clickable="play" id={id} key={id} symbol={symbols[j][Math.floor(i/3)]} />);
+            // Empty square
+            props.symbol = symbols[j][Math.floor(i/3)];
           }
           id++;
-          ret.push(s);
+          ret.push(React.createElement(Square, props));
         }
       }
+
+      // Right label
       ret.push(<Square label="true" key={String.fromCharCode(65+i) + '2'} symbol={String.fromCharCode(65+i)} />);
     }
 
+    // Bottom labels
     ret.push(<Square key="blank3" label="true" symbol=" " />);
     for(let i=1;i<10;i++) ret.push(<Square key={i + 'bottom'} label="true" symbol={i} />);
     ret.push(<Square key="blank4" label="true" symbol=" " />);
@@ -355,7 +370,11 @@ class App extends React.Component {
       var opponents = [];
       var captured = [];
       var myplayernum = -1;
+      var latest = [];
       for (const [playernum, attrs] of Object.entries(this.state.players)) {
+        if ('last' in attrs) {
+          latest.push(attrs.last);
+        }
         if ('self' in attrs) {
           captured = attrs.captured;
           myplayernum = playernum;
@@ -377,7 +396,7 @@ class App extends React.Component {
           <div id="opponents">
           {opponents}
           </div>
-          <Board tiles={this.state.board} playTile={this.playTile} />
+          <Board tiles={this.state.board} latest={latest} playTile={this.playTile} />
           <Message content={this.state.message} />
           <Rack tiles={this.state.rack} playernum={myplayernum} setHighlight={this.setHighlightedTile} />
           <Captured tiles={captured} />

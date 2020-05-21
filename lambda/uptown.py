@@ -127,9 +127,10 @@ def prepare_player_state(state, myat):
     ret['message'] = state['message']
   
   for authtoken in state['players']:
-    ret['players'][state['players'][authtoken]['playernum']] = {'name': state['players'][authtoken]['name']}
-    if 'captured' in state['players'][authtoken]:
-      ret['players'][state['players'][authtoken]['playernum']]['captured'] = state['players'][authtoken]['captured']
+    ret['players'][state['players'][authtoken]['playernum']] = {}
+    for item in ['name', 'last', 'captured']:
+      if item in state['players'][authtoken]:
+        ret['players'][state['players'][authtoken]['playernum']][item] = state['players'][authtoken][item]
     if authtoken == myat:
       ret['players'][state['players'][authtoken]['playernum']]['self'] = True
       if 'rack' in state['players'][authtoken]:
@@ -186,6 +187,7 @@ def lambda_handler(event, context):
   
   ### MOVE ###
   if message['action'] == 'move':
+    # Sanity checks
     if not authtoken in state['players']:
       ws.error('you are not in this game')
       return {'statusCode': 200}
@@ -204,11 +206,9 @@ def lambda_handler(event, context):
     if not valid_move(message['tile'], message['location']):
       ws.error('that tile does not go there')
       return {'statusCode': 200}
+    
     # Handle capturing
     if str(message['location']) in state['board']:
-      print('Looking for self capture')
-      print(state['board'][str(message['location'])][0])
-      print(state['players'][authtoken]['playernum'])
       if state['board'][str(message['location'])][0] == state['players'][authtoken]['playernum']:
         ws.error('you cannot capture your own tile')
         return {'statusCode': 200}
@@ -216,18 +216,26 @@ def lambda_handler(event, context):
         ws.error('capturing that tile would break up a group')
         return {'statusCode': 200}
       state['players'][authtoken]['captured'].append(state['board'][str(message['location'])])
+    
     # Place the tile on the board
     state['board'][message['location']] = [state['players'][authtoken]['playernum'], message['tile']]
+
     # Remove the tile from the rack
     state['players'][authtoken]['rack'].remove(message['tile'])
+
+    # Update last move for this player
+    state['players'][authtoken]['last'] = message['location']
+
     # If there are more tiles to draw, draw one
     if len(state['players'][authtoken]['tiles']) > 0:
       state['players'][authtoken]['rack'].append(state['players'][authtoken]['tiles'].pop())
+    
     # Advance to the next player
     state['nextplayer'] += 1
     if state['nextplayer'] > len(state['players']):
       state['nextplayer'] = 1
-    # TODO - Check for end of game
+    
+    # Check for end of game
     gameover = True
     for authtoken in state['players']:
       if len(state['players'][authtoken]['rack']) == 5:

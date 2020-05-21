@@ -11,8 +11,8 @@ span#error, form#join, input#startbutton {
   margin-top: 2%;
 }
 
-div#rack div.highlighted {
-  border: double;
+div#rack div.highlighted, div.board div.latest {
+  border-color: #0000ff;
 }
 
 span#title {
