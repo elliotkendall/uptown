@@ -15,6 +15,59 @@ class WebSocketMessenger:
   def error(self, message):
     self.send_message({'error': message})
 
+def find_groups(board):
+  groups = {}
+  for square in range(81):
+    if board[square] is not None:
+      player = board[square][0]
+      if not player in groups:
+        groups[player] = []
+
+      adjgroups = []
+      for gid in range(len(groups[player])):
+        if (square % 9 != 0 and square-1 in groups[player][gid]) or square-9 in groups[player][gid]:
+          adjgroups.append(gid)
+
+      if len(adjgroups) == 0:
+        # No adjacent groups, so start a new one
+        groups[player].append([square])
+      elif len(adjgroups) == 1:
+        # Join that group
+        groups[player][adjgroups[0]].append(square)
+      else:
+        # Combine the groups and join the result
+        groups[player][adjgroups[0]] += groups[player][adjgroups[1]] + [square]
+        del groups[player][gid]
+
+  return groups
+
+def score_game(board, players):
+  # Reindex players by player number
+  p2 = {}
+  for authtoken in players:
+    p2[players[authtoken]['playernum']] = players[authtoken]
+  players = p2
+
+  groups = find_groups(board)
+  fewest_groups = 99
+  fewest_captured = 99
+  winners = []
+  for pnum in groups:
+    if (len(groups[pnum]) == fewest_groups
+    and len(players[pnum]['captured']) == fewest_captured):
+      winners.append(pnum)
+
+    if (len(groups[pnum]) < fewest_groups
+    or (len(groups[pnum]) == fewest_groups
+    and len(players[pnum]['captured']) < fewest_captured)):
+      winners = [pnum]
+      fewest_groups = len(groups[pnum])
+      fewest_captured = len(players[pnum]['captured'])
+  names = []
+  for pnum in winners:
+    names.append(players[pnum]['name'])
+  return {'winners': names, 'groups': fewest_groups, 'captured': fewest_captured}
+
 def get_game_state(gid, s3):
   objects = s3.list_objects_v2(Bucket=os.environ['S3_BUCKET_NAME'], Prefix=gid)
   if objects['KeyCount'] == 0:
@@ -74,7 +127,7 @@ def valid_capture(location, board):
   color = board[location][0]
   orth = []
   for i in [-9, -1, 1, 9]:
-    if (location + i) in board and board[location + i][0] == color:
+    if (location + i) in board and board[location + i] is not None and board[location + i][0] == color:
       orth.append(i)
 
   if len(orth) < 2:
@@ -83,7 +136,7 @@ def valid_capture(location, board):
 
   diag = []
   for i in [-10, -8, 8, 10]:
-    if (location + i) in board and board[location + i][0] == color:
+    if (location + i) in board and board[location + i] is not None and board[location + i][0] == color:
       diag.append(i)
 
   if len(orth) == 2:
@@ -168,9 +221,12 @@ def lambda_handler(event, context):
   authtoken = message['authtoken']
   state = get_game_state(gameid, s3)
 
-  if state == None:
+  if state is None:
     state = create_game(gameid, s3)
   elif 'gameover' in state:
+    if not authtoken in state['players']:
+      ws.error('you are not in this game')
+      return {'statusCode': 200}
     ws.send_message(prepare_player_state(state, authtoken), cid)
     return {'statusCode': 200}
 
@@ -205,14 +261,14 @@ def lambda_handler(event, context):
       return {'statusCode': 200}
 
     # Handle capturing
-    if message['location'] in state['board']:
+    if state['board'][message['location']] is not None:
       if state['board'][message['location']][0] == state['players'][authtoken]['playernum']:
         ws.error('you cannot capture your own tile')
         return {'statusCode': 200}
       if not valid_capture(message['location'], state['board']):
         ws.error('capturing that tile would break up a group')
         return {'statusCode': 200}
-      state['players'][authtoken]['captured'].append(state['board'][str(message['location'])])
+      state['players'][authtoken]['captured'].append(state['board'][message['location']])
 
     # Place the tile on the board
     state['board'][message['location']] = [state['players'][authtoken]['playernum'], message['tile']]
@@ -239,7 +295,12 @@ def lambda_handler(event, context):
         gameover = False
         break
     if gameover:
-      state['message'] = 'game over'
+      score = score_game(state['board'], state['players'])
+      if len(score['winners']) == 1:
+        state['message'] = score['winners'][0] + ' wins'
+      else:
+        state['message'] = "It's a tie! " + ', '.join(score['winners']) + ' win'
+      state['message'] += ' with ' + str(score['groups']) + ' groups and ' + str(score['captured']) + ' captured tiles'
       state['gameover'] = True
     update_game(state, gameid, s3)
 
@@ -307,7 +368,11 @@ def lambda_handler(event, context):
       return {'statusCode': 200}
 
     del state['watchers']
-    state['board'] = {}
+
+    # We can't use a dictionary for this, since it's going to have int indexes which will get converted to string when it's converted to JSON
+    # However, we want to be able to use arbitrary indexes into it without having to worry about expanding it
+    state['board'] = [None] * 81
+
     state['nextplayer'] = 1
     for pat in state['players']:
       state['players'][pat]['captured'] = []

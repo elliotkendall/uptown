@@ -87,16 +87,16 @@ class Board extends React.Component {
       for(let j=0;j<3;j++) {
         for(let k=0; k<3; k++) {
           var props = {playTile: this.props.playTile, clickable: "play", id: id, key: id}
-          if (id in this.props.tiles) {
+          if (this.props.tiles[id] == null) {
+            // Empty square
+            props.symbol = symbols[j][Math.floor(i/3)];
+          } else {
             // Tile
             props.symbol = this.props.tiles[id][1];
             props.player = this.props.tiles[id][0];
             if (this.props.latest.includes(id)) {
               props.latest = true;
             }
-          } else {
-            // Empty square
-            props.symbol = symbols[j][Math.floor(i/3)];
           }
           id++;
           ret.push(React.createElement(Square, props));
