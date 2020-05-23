@@ -127,7 +127,11 @@ def valid_capture(location, board):
   color = board[location][0]
   orth = []
   for i in [-9, -1, 1, 9]:
-    if (location + i) in board and board[location + i] is not None and board[location + i][0] == color:
+    newloc = location + i
+    if (newloc > 0
+    and newloc < len(board)
+    and board[newloc] is not None
+    and board[location + i][0] == color):
       orth.append(i)
 
   if len(orth) < 2:
@@ -136,7 +140,11 @@ def valid_capture(location, board):
 
   diag = []
   for i in [-10, -8, 8, 10]:
-    if (location + i) in board and board[location + i] is not None and board[location + i][0] == color:
+    newloc = location + i
+    if (newloc > 0
+    and newloc < len(board)
+    and board[newloc] is not None
+    and board[location + i][0] == color):
       diag.append(i)
 
   if len(orth) == 2:
