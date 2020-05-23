@@ -116,7 +116,6 @@ def valid_move(tile, location):
   quadrants = {'~': [0, 0], '!': [0, 1], '@': [0, 2], '#': [1, 0], '?': [1, 1], '%': [1, 2], '^': [2, 0], '&': [2, 1], '*': [2, 2]}
   if tile in quadrants:
     quadrant = quadrants[tile]
-    print(quadrant)
     start = 3*quadrant[1] + 27*quadrant[0]
     return (between(location, start, start + 2)
      or between(location, start + 9, start + 11)
