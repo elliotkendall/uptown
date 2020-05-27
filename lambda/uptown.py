@@ -123,51 +123,12 @@ def valid_move(tile, location):
   return False
 
 def valid_capture(location, board):
+  board = board.copy()
   color = board[location][0]
-  orth = []
-  for i in [-9, -1, 1, 9]:
-    newloc = location + i
-    if (newloc > 0
-    and newloc < len(board)
-    and board[newloc] is not None
-    and board[location + i][0] == color):
-      orth.append(i)
-
-  if len(orth) < 2:
-    # Don't even need to count the diagonal tiles for this case
-    return True
-
-  diag = []
-  for i in [-10, -8, 8, 10]:
-    newloc = location + i
-    if (newloc > 0
-    and newloc < len(board)
-    and board[newloc] is not None
-    and board[location + i][0] == color):
-      diag.append(i)
-
-  if len(orth) == 2:
-    if abs(orth[0]) == abs(orth[1]):
-      # Opposite sides
-      return False
-    if (orth[0] + orth[1]) in diag:
-      # Diagonal between corners is filled
-      return True
-    return False
-  elif len(orth) == 3:
-    lookup = {
-      -9: [-8, -10],
-      -1: [8, -10],
-      1: [-8, 10],
-      9: [8, 10]
-    }
-    corners = lookup[sum(orth)]
-    if corners[0] in diag and corners[1] in diag:
-      return True
-    return False
-  elif len(orth) == 4 and len(diag) == 4:
-    return True
-  return False
+  before = find_groups(board)[color]
+  board[location] = None
+  after = find_groups(board)[color]
+  return len(after) <= len(before)
 
 def prepare_player_state(state, myat):
   ret = {'players': {}}
@@ -307,7 +268,7 @@ def lambda_handler(event, context):
         state['message'] = score['winners'][0] + ' wins'
       else:
         state['message'] = "It's a tie! " + ', '.join(score['winners']) + ' win'
-      state['message'] += ' with ' + str(score['groups']) + ' groups and ' + str(score['captured']) + ' captured tiles'
+      state['message'] += ' with ' + str(score['groups']) + ' group(s) and ' + str(score['captured']) + ' captured tile(s)'
       state['gameover'] = True
     update_game(state, gameid, s3)
 
