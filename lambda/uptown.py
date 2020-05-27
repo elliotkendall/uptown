@@ -86,7 +86,7 @@ def update_game(state, gid, s3):
 
 def shuffle_tiles():
   import random
-  tiles = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '~', '!', '@', '#', '%', '^', '&', '*', '$']
+  tiles = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '~', '!', '@', '#', '%', '^', '&', '*', '?', '$']
   random.shuffle(tiles)
   return tiles
 
