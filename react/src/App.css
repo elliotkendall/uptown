@@ -7,6 +7,20 @@
 
 }
 
+div#scroll {
+  margin-top: 1%;
+  padding: 1%;
+  max-height: 5vh;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 1.5vw;
+  overflow-y: scroll;
+  border: thin black solid;
+}
+
+div#scroll span {
+  display: block;
+}
+
 span#error, form#join, input#startbutton {
   margin-top: 2%;
 }

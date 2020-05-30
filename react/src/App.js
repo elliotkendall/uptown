@@ -141,9 +141,6 @@ class Opponent extends React.Component {
   render() {
     var elements = [];
     elements.push(<div key="playername" className={"name player" + this.props.playernum}>Player {this.props.playernum}: {this.props.name}</div>);
-    if (this.props.isnext) {
-      elements.push(<div key="spinner" className="loader">Loading...</div>);
-    }
     elements.push(<Captured key="captured" tiles={this.props.captured} />);
     return (
       <div className="opponent">
@@ -166,18 +163,6 @@ class Captured extends React.Component {
       <div className="captured">{captured}</div>
     );
   }
-}
-
-class Message extends React.Component {
-  render() {
-    if (this.props.content === "") {
-      return (null);
-    }
-    return (
-      <div id="message">{this.props.content}</div>
-    );
-  }
-
 }
 
 class CreateInterface extends React.Component {
@@ -232,6 +217,16 @@ class JoinInterface extends React.Component {
 
 }
 
+class Scroll extends React.Component {
+  render() {
+    return (
+      <div id="scroll">
+        {this.props.items}
+      </div>
+    );
+  }
+}
+
 class App extends React.Component {
   componentDidMount() {
     const cookies = new Cookies();
@@ -246,6 +241,7 @@ class App extends React.Component {
 
     this.wsclient.onopen = () => {
       console.log('WebSocket Client Connected');
+      this.addToScroll("Welcome to Uptown");
       if (this.state.gameid !== null) {
         this.wsclient.send(JSON.stringify({
           "gameid": this.state.gameid,
@@ -257,19 +253,33 @@ class App extends React.Component {
     this.wsclient.onerror = (err) => {
       console.log("Websocket error");
       console.log(err);
-      this.setState({"message": "Error connecting to websocket"});
+      this.addToScroll("Error connecting to websocket", "error");
     }
     this.wsclient.onmessage = (message) => {
       let data = JSON.parse(message.data);
       console.log("Received message");
       console.log(data);
       if ('error' in data) {
-        this.setState({"message": data.error});
+        this.addToScroll(data.error, "error");
       } else {
-        if (! ('message' in data)) {
-          data.message = '';
-        }
         this.setState(data);
+      }
+      if ('message' in data) {
+        this.addToScroll(data.message);
+      }
+      if ('nextplayer' in data) {
+        var lastplayer = data.nextplayer - 1;
+        if (lastplayer < 1) {
+          lastplayer = Object.keys(data.players).length;
+        }
+        if ("last" in data.players[lastplayer]) {
+          this.addToScroll(data.players[lastplayer].name + ' plays ' + data.board[data.players[lastplayer].last][1]);
+        }
+        if ("self" in data.players[data.nextplayer]) {
+          this.addToScroll("It's your turn!");
+        } else {
+          this.addToScroll("It's " + data.players[data.nextplayer].name + "'s turn");
+        }
       }
     };
   }
@@ -277,9 +287,9 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     if (window.location.search === "") {
-      this.state = { gameid: null };
+      this.state = { gameid: null, scroll: []};
     } else {
-      this.state = { gameid: window.location.search.substring(1) };
+      this.state = { gameid: window.location.search.substring(1), scroll: [] };
     }
 
     this.createHandler = this.createHandler.bind(this);
@@ -289,6 +299,18 @@ class App extends React.Component {
     this.playTile = this.playTile.bind(this);
     this.setHighlightedTile = this.setHighlightedTile.bind(this);
   }  
+
+  addToScroll(message, type = null) {
+    var scroll = this.state.scroll;
+    var newitem;
+    if (type === null) {
+      newitem = (<span key={scroll.length}>{message}</span>);
+    } else {
+      newitem = (<span key={scroll.length} className={type}>{message}</span>);
+    }
+    scroll.push(newitem);
+    this.setState({scroll: scroll});
+  }
 
   createHandler() {
     let gameid = document.getElementById('gameid').value;
@@ -326,7 +348,7 @@ class App extends React.Component {
   playTile(location) {
     var tiles = document.getElementsByClassName('highlighted');
     if (tiles.length === 0) {
-      this.setState({"message": "Select a tile from your rack first"});
+      this.addToScroll("Select a tile from your rack first");
       return;
     } else if (tiles.length > 1) {
       console.log("Multiple highlighted tiles?");
@@ -384,7 +406,6 @@ class App extends React.Component {
           opponents.push(<Opponent
            key={playernum}
            playernum={playernum}
-           isnext={playernum === this.state.nextplayer.toString()}
            name={attrs.name}
            captured={attrs.captured}
           />);
@@ -399,7 +420,7 @@ class App extends React.Component {
           {opponents}
           </div>
           <Board tiles={this.state.board} latest={latest} playTile={this.playTile} />
-          <Message content={this.state.message} />
+          <Scroll items={this.state.scroll} />
           <Rack tiles={this.state.rack} playernum={myplayernum}
            setHighlight={this.setHighlightedTile} />
           <Captured tiles={captured} />
