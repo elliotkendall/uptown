@@ -227,15 +227,15 @@ class Scroll extends React.Component {
     let items = [];
     for (var item in this.props.items) {
       if (this.props.items[item][1]) {
-        items.push(<span className={this.props.items[item][1]}>{this.props.items[item][0]}</span>);
+        items.push(<span key={item} className={this.props.items[item][1]}>{this.props.items[item][0]}</span>);
       } else {
-        items.push(<span>{this.props.items[item][0]}</span>);
+        items.push(<span key={item}>{this.props.items[item][0]}</span>);
       }
     }
     if (this.props.nextPlayer === true) {
-     items.push(<span id="nextplayer">It's your turn!</span>);
+     items.push(<span key="nextplayer" id="nextplayer">It's your turn!</span>);
     } else {
-     items.push(<span id="nextplayer">It's {this.props.nextPlayer}'s turn</span>);
+     items.push(<span key="nextplayer" id="nextplayer">It's {this.props.nextPlayer}'s turn</span>);
     }
     return (
       <div id="scroll">
