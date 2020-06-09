@@ -32,8 +32,8 @@ span#error, form#join, input#startbutton {
   margin-top: 2%;
 }
 
-div#rack div.highlighted, div.board div.latest {
-  border-color: #0000ff;
+div#rack div.highlighted {
+  outline: .2rem solid;
 }
 
 span#title {
@@ -133,6 +133,7 @@ div#rack {
 
 div#rack div.square {
   font-size: 3vw;
+  margin: .2rem;
 }
 
 div.board {
