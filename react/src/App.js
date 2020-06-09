@@ -218,10 +218,28 @@ class JoinInterface extends React.Component {
 }
 
 class Scroll extends React.Component {
+  componentDidUpdate() {
+    var np = document.getElementById("nextplayer");
+    np.scrollIntoView();
+  }
+
   render() {
+    let items = [];
+    for (var item in this.props.items) {
+      if (this.props.items[item][1]) {
+        items.push(<span className={this.props.items[item][1]}>{this.props.items[item][0]}</span>);
+      } else {
+        items.push(<span>{this.props.items[item][0]}</span>);
+      }
+    }
+    if (this.props.nextPlayer === true) {
+     items.push(<span id="nextplayer">It's your turn!</span>);
+    } else {
+     items.push(<span id="nextplayer">It's {this.props.nextPlayer}'s turn</span>);
+    }
     return (
       <div id="scroll">
-        {this.props.items}
+        {items}
       </div>
     );
   }
@@ -275,11 +293,6 @@ class App extends React.Component {
         if ("last" in data.players[lastplayer]) {
           this.addToScroll(data.players[lastplayer].name + ' plays ' + data.board[data.players[lastplayer].last][1]);
         }
-        if ("self" in data.players[data.nextplayer]) {
-          this.addToScroll("It's your turn!");
-        } else {
-          this.addToScroll("It's " + data.players[data.nextplayer].name + "'s turn");
-        }
       }
     };
   }
@@ -304,9 +317,9 @@ class App extends React.Component {
     var scroll = this.state.scroll;
     var newitem;
     if (type === null) {
-      newitem = (<span key={scroll.length}>{message}</span>);
+      newitem = [message, null];
     } else {
-      newitem = (<span key={scroll.length} className={type}>{message}</span>);
+      newitem = [message, type];
     }
     scroll.push(newitem);
     this.setState({scroll: scroll});
@@ -414,13 +427,21 @@ class App extends React.Component {
       if (myplayernum === -1) {
         return (<span>Did not find own player</span>);
       }
+      var nextPlayer;
+      if ("self" in this.state.players[this.state.nextplayer]) {
+        nextPlayer = true;
+      } else {
+        nextPlayer = this.state.players[this.state.nextplayer].name;
+      }
       return (
         <div className="App">
           <div id="opponents">
           {opponents}
           </div>
+          <div id="middle">
           <Board tiles={this.state.board} latest={latest} playTile={this.playTile} />
-          <Scroll items={this.state.scroll} />
+          <Scroll items={this.state.scroll} nextPlayer={nextPlayer} />
+          </div>
           <Rack tiles={this.state.rack} playernum={myplayernum}
            setHighlight={this.setHighlightedTile} />
           <Captured tiles={captured} />

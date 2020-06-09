@@ -7,10 +7,17 @@
 
 }
 
+div#middle {
+  display: flex;
+  align-items: center;
+  width: 90%;
+  justify-content: center;
+}
+
 div#scroll {
   margin-top: 1%;
   padding: 1%;
-  max-height: 5vh;
+  height: 21.3em;
   font-family: Verdana, Arial, Helvetica, sans-serif;
   font-size: 1.5vw;
   overflow-y: scroll;
