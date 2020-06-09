@@ -140,7 +140,7 @@ class Rack extends React.Component {
 class Opponent extends React.Component {
   render() {
     var elements = [];
-    elements.push(<div key="playername" className={"name player" + this.props.playernum}>Player {this.props.playernum}: {this.props.name}</div>);
+    elements.push(<div key="playername" className={"name player" + this.props.playernum}>{this.props.name}</div>);
     elements.push(<Captured key="captured" tiles={this.props.captured} />);
     return (
       <div className="opponent">
