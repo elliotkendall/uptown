@@ -232,10 +232,12 @@ class Scroll extends React.Component {
         items.push(<span key={item}>{this.props.items[item][0]}</span>);
       }
     }
-    if (this.props.nextPlayer === true) {
-     items.push(<span key="nextplayer" id="nextplayer">It's your turn!</span>);
+    if (this.props.gameOver) {
+      items.push(<span key="nextplayer" id="nextplayer">Game over</span>);
+    } else if (this.props.nextPlayer === true) {
+      items.push(<span key="nextplayer" id="nextplayer">It's your turn!</span>);
     } else {
-     items.push(<span key="nextplayer" id="nextplayer">It's {this.props.nextPlayer}'s turn</span>);
+      items.push(<span key="nextplayer" id="nextplayer">It's {this.props.nextPlayer}'s turn</span>);
     }
     return (
       <div id="scroll">
@@ -284,6 +286,9 @@ class App extends React.Component {
       }
       if ('message' in data) {
         this.addToScroll(data.message);
+      }
+      if ('gameover' in data) {
+        return;
       }
       if ('nextplayer' in data) {
         var lastplayer = data.nextplayer - 1;
@@ -436,7 +441,9 @@ class App extends React.Component {
           </div>
           <div id="middle">
           <Board tiles={this.state.board} playTile={this.playTile} />
-          <Scroll items={this.state.scroll} nextPlayer={nextPlayer} />
+          <Scroll items={this.state.scroll}
+                  nextPlayer={nextPlayer}
+                  gameOver={this.state.gameover} />
           </div>
           <Rack tiles={this.state.rack} playernum={myplayernum}
            tilesLeft={this.state.tilesleft}
