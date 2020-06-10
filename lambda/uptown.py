@@ -125,9 +125,15 @@ def valid_move(tile, location):
 def valid_capture(location, board):
   board = board.copy()
   color = board[location][0]
-  before = find_groups(board)[color]
+  try:
+    before = find_groups(board)[color]
+  except KeyError:
+    before = []
   board[location] = None
-  after = find_groups(board)[color]
+  try:
+    after = find_groups(board)[color]
+  except KeyError:
+    after = []
   return len(after) <= len(before)
 
 def prepare_player_state(state, myat):
