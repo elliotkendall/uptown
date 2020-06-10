@@ -166,23 +166,37 @@ div.label {
   background-color: #e1e1fb;
 }
 
-div.player1 {
+span.error {
+  color: #ba0000;
+}
+
+span.yourturn {
+  animation:blinkingText .7s infinite;
+  animation-direction: alternate;
+}
+
+@keyframes blinkingText{
+  from {color: black;}
+  to {color: white;}
+}
+
+div.player1, span.player1 {
   background-color: #c5f0f9;
 }
 
-div.player2 {
+div.player2, span.player2 {
   background-color: #ffff8b;
 }
 
-div.player3 {
+div.player3, span.player3 {
   background-color: #c8e6c8;
 }
 
-div.player4 {
+div.player4, span.player4 {
   background-color: #f03f84;
 }
 
-div.player5 {
+div.player5, span.player5 {
   background-color: #f28c60;
 }
 

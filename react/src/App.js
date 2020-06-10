@@ -234,10 +234,10 @@ class Scroll extends React.Component {
     }
     if (this.props.gameOver) {
       items.push(<span key="nextplayer" id="nextplayer">Game over</span>);
-    } else if (this.props.nextPlayer === true) {
-      items.push(<span key="nextplayer" id="nextplayer">It's your turn!</span>);
+    } else if (this.props.nextPlayerName === true) {
+      items.push(<span key="nextplayer" className="yourturn" id="nextplayer">It's your turn!</span>);
     } else {
-      items.push(<span key="nextplayer" id="nextplayer">It's {this.props.nextPlayer}'s turn</span>);
+      items.push(<span key="nextplayer" className={"player" + this.props.nextPlayerNumber} id="nextplayer">It's {this.props.nextPlayerName}'s turn</span>);
     }
     return (
       <div id="scroll">
@@ -288,7 +288,8 @@ class App extends React.Component {
           lastplayer = Object.keys(data.players).length;
         }
         if ("last" in data.players[lastplayer]) {
-          this.addToScroll(data.players[lastplayer].name + ' plays ' + data.board[data.players[lastplayer].last][1]);
+          this.addToScroll(data.players[lastplayer].name + ' plays '
+           + data.board[data.players[lastplayer].last][1], 'player' + lastplayer);
         }
       }
     };
@@ -369,7 +370,7 @@ class App extends React.Component {
   playTile(location) {
     var tiles = document.getElementsByClassName('highlighted');
     if (tiles.length === 0) {
-      this.addToScroll("Select a tile from your rack first");
+      this.addToScroll("Select a tile from your rack first", "error");
       return;
     } else if (tiles.length > 1) {
       console.log("Multiple highlighted tiles?");
@@ -449,7 +450,8 @@ class App extends React.Component {
           <div id="middle">
           <Board tiles={this.state.board} playTile={this.playTile} />
           <Scroll items={this.state.scroll}
-                  nextPlayer={nextPlayer}
+                  nextPlayerName={nextPlayer}
+                  nextPlayerNumber={this.state.nextplayer}
                   gameOver={this.state.gameover} />
           </div>
           <Rack tiles={this.state.rack} playernum={myplayernum}
