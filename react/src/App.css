@@ -136,6 +136,16 @@ div#rack div.square {
   margin: .2rem;
 }
 
+div#rack div.tilesleft {
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 1.7vw;
+  margin-left: 5rem;
+}
+
+div#rack div.tilesleft div.content {
+  height: 70%;
+}
+
 div.board {
   width: 40%;
   padding-top: 1%;

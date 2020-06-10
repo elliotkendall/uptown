@@ -141,6 +141,7 @@ def prepare_player_state(state, myat):
   if 'board' in state:
     ret['board'] = state['board']
     ret['nextplayer'] = state['nextplayer']
+    ret['tilesleft'] = len(state['players'][myat]['tiles'])
   if 'message' in state:
     ret['message'] = state['message']
 

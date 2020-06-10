@@ -54,6 +54,9 @@ class Square extends React.Component {
     if (this.props.label === "true") {
       classes += " label";
     }
+    if ("className" in this.props) {
+      classes += " " + this.props.className;
+    }
     return (
       <div className={classes} onClick={clickHandler} >
         <div className="content">{this.props.symbol}</div>
@@ -123,6 +126,9 @@ class Rack extends React.Component {
                symbol={this.props.tiles[i]}
                key={i} />);
     }
+    tiles.push(<Square key="tilesleft" symbol={this.props.tilesLeft}
+     className="tilesleft"
+     player={this.props.playernum} />);
     return (
       <>
       <div id="rack">{tiles}</div>
@@ -433,6 +439,7 @@ class App extends React.Component {
           <Scroll items={this.state.scroll} nextPlayer={nextPlayer} />
           </div>
           <Rack tiles={this.state.rack} playernum={myplayernum}
+           tilesLeft={this.state.tilesleft}
            setHighlight={this.setHighlightedTile} />
           <Captured tiles={captured} />
         </div>
