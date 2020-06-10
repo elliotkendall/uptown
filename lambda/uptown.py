@@ -23,6 +23,7 @@ def find_groups(board):
       if not player in groups:
         groups[player] = []
 
+      # Is the square above and/or to the left part of an existing group?
       adjgroups = []
       for gid in range(len(groups[player])):
         if (square % 9 != 0 and square-1 in groups[player][gid]) or square-9 in groups[player][gid]:
@@ -37,7 +38,7 @@ def find_groups(board):
       else:
         # Combine the groups and join the result
         groups[player][adjgroups[0]] += groups[player][adjgroups[1]] + [square]
-        del groups[player][gid]
+        del groups[player][adjgroups[1]]
 
   return groups
 
@@ -142,6 +143,8 @@ def prepare_player_state(state, myat):
     ret['board'] = state['board']
     ret['nextplayer'] = state['nextplayer']
     ret['tilesleft'] = len(state['players'][myat]['tiles'])
+  if 'gameover' in state:
+    ret['gameover'] = state['gameover']
   if 'message' in state:
     ret['message'] = state['message']
 
