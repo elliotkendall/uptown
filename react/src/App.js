@@ -248,15 +248,7 @@ class Scroll extends React.Component {
 }
 
 class App extends React.Component {
-  componentDidMount() {
-    const cookies = new Cookies();
-    var authtoken = cookies.get('authtoken');
-    if (! authtoken) {
-      authtoken = uuidv4();
-      cookies.set('authtoken', authtoken, { path: '/' });
-    }
-    this.setState({"authtoken": authtoken});
-
+  connectToWebSocket() {
     this.wsclient = new W3CWebSocket(config.APIURL);
 
     this.wsclient.onopen = () => {
@@ -300,6 +292,17 @@ class App extends React.Component {
         }
       }
     };
+  }
+  componentDidMount() {
+    const cookies = new Cookies();
+    var authtoken = cookies.get('authtoken');
+    if (! authtoken) {
+      authtoken = uuidv4();
+      cookies.set('authtoken', authtoken, { path: '/' });
+    }
+    this.setState({"authtoken": authtoken});
+
+    this.connectToWebSocket();
   }
 
   constructor(props) {
@@ -379,6 +382,10 @@ class App extends React.Component {
       "tile": tiles[0].textContent,
       "location": location
     });
+    if (this.wsclient.readyState !== 1) {
+      console.log("Websocket connection closed; reconnecting");
+      this.connectToWebSocket();
+    }
     console.log("Sending move");
     console.log(message);
     this.wsclient.send(message);
