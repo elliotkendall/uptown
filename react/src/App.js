@@ -171,7 +171,7 @@ class CreateInterface extends React.Component {
       <>
       <span id="title">Welcome to Uptown!</span>
       <form onSubmit={this.props.onClick}>
-      <input id="gameid" name="gameid" type="text"
+      <input id="gameid" type="text"
        placeholder="Please enter a game identifier"
        autoFocus="autofocus" />
       <input type="submit" value="Create or join game" />
