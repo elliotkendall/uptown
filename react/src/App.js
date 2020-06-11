@@ -67,12 +67,12 @@ class Square extends React.Component {
 
 class Board extends React.Component {
   render() {
-    var symbols = [
+    let symbols = [
      ['~', '#', '^'],
      ['!', '?', '&'],
      ['@', '%', '*']
     ];
-    var ret = [];
+    let ret = [];
 
     // Top labels
     ret.push(<Square key="blank1" label="true" symbol=" " />);
@@ -86,7 +86,7 @@ class Board extends React.Component {
 
       for(let j=0;j<3;j++) {
         for(let k=0; k<3; k++) {
-          var props = {playTile: this.props.playTile, clickable: "play", id: id, key: id}
+          let props = {playTile: this.props.playTile, clickable: "play", id: id, key: id}
           if (this.props.tiles[id] == null) {
             // Empty square
             props.symbol = symbols[j][Math.floor(i/3)];
@@ -139,7 +139,7 @@ class Rack extends React.Component {
 
 class Opponent extends React.Component {
   render() {
-    var elements = [];
+    let elements = [];
     elements.push(<div key="playername" className={"name player" + this.props.playernum}>{this.props.name}</div>);
     elements.push(<Captured key="captured" tiles={this.props.captured} />);
     return (
@@ -201,7 +201,7 @@ class JoinInterface extends React.Component {
         <input type="button" value="Join" onClick={this.props.join} />
       </div>);
     }
-    var message = null;
+    let message = null;
     if (this.props.message !== "") {
       message = <span>{this.props.message}</span>;
     }
@@ -219,13 +219,13 @@ class JoinInterface extends React.Component {
 
 class Scroll extends React.Component {
   componentDidUpdate() {
-    var np = document.getElementById("nextplayer");
+    let np = document.getElementById("nextplayer");
     np.scrollIntoView();
   }
 
   render() {
     let items = [];
-    for (var item in this.props.items) {
+    for (let item in this.props.items) {
       if (this.props.items[item][1]) {
         items.push(<span key={item} className={this.props.items[item][1]}>{this.props.items[item][0]}</span>);
       } else {
@@ -249,11 +249,11 @@ class Scroll extends React.Component {
 
 class App extends React.Component {
   intToOrdinal(i) {
-    if (i == 1) {
+    if (i === 1) {
       return '1st';
-    } else if (i == 2) {
+    } else if (i === 2) {
       return '2nd';
-    } else if (i == 3) {
+    } else if (i === 3) {
       return '3rd';
     } else {
       return i.toString() + 'th';
@@ -293,14 +293,14 @@ class App extends React.Component {
         this.addToScroll(data.message);
       }
       if ('scores' in data) {
-        for (var i=0;i<data.scores.length;i++) {
-          var winners = [];
+        for (let i=0;i<data.scores.length;i++) {
+          let winners = [];
           data.scores[i][0].forEach(playernum => {
             winners.push(data.players[playernum].name);
           });
 
-          var groups = data.scores[i][1];
-          var captures = data.scores[i][2];
+          let groups = data.scores[i][1];
+          let captures = data.scores[i][2];
           this.addToScroll(this.intToOrdinal(i+1) + ' place: ' + winners.join(', ')
            + ' with ' + groups.toString() + ' groups and '
            + captures.toString() + ' captured tiles');
@@ -308,7 +308,7 @@ class App extends React.Component {
         return;
       }
       if ('nextplayer' in data) {
-        var lastplayer = data.nextplayer - 1;
+        let lastplayer = data.nextplayer - 1;
         if (lastplayer < 1) {
           lastplayer = Object.keys(data.players).length;
         }
@@ -321,7 +321,7 @@ class App extends React.Component {
   }
   componentDidMount() {
     const cookies = new Cookies();
-    var authtoken = cookies.get('authtoken');
+    let authtoken = cookies.get('authtoken');
     if (! authtoken) {
       authtoken = uuidv4();
       cookies.set('authtoken', authtoken, { path: '/' });
@@ -348,8 +348,8 @@ class App extends React.Component {
   }  
 
   addToScroll(message, type = null) {
-    var scroll = this.state.scroll;
-    var newitem;
+    let scroll = this.state.scroll;
+    let newitem;
     if (type === null) {
       newitem = [message, null];
     } else {
@@ -393,7 +393,7 @@ class App extends React.Component {
   }
 
   playTile(location) {
-    var tiles = document.getElementsByClassName('highlighted');
+    let tiles = document.getElementsByClassName('highlighted');
     if (tiles.length === 0) {
       this.addToScroll("Select a tile from your rack first", "error");
       return;
@@ -401,7 +401,7 @@ class App extends React.Component {
       console.log("Multiple highlighted tiles?");
       return;
     }
-    var message = JSON.stringify({
+    let message = JSON.stringify({
       "gameid": this.state.gameid,
       "authtoken": this.state.authtoken,
       "action": "move",
@@ -442,9 +442,9 @@ class App extends React.Component {
       );    
     } else if ('board' in this.state) {
       // Render the game board
-      var opponents = [];
-      var captured = [];
-      var myplayernum = -1;
+      let opponents = [];
+      let captured = [];
+      let myplayernum = -1;
       for (const [playernum, attrs] of Object.entries(this.state.players)) {
         if ('self' in attrs) {
           captured = attrs.captured;
@@ -461,7 +461,7 @@ class App extends React.Component {
       if (myplayernum === -1) {
         return (<span>Did not find own player</span>);
       }
-      var nextPlayer;
+      let nextPlayer;
       if ("self" in this.state.players[this.state.nextplayer]) {
         nextPlayer = true;
       } else {
