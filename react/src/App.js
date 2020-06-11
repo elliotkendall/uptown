@@ -248,6 +248,18 @@ class Scroll extends React.Component {
 }
 
 class App extends React.Component {
+  intToOrdinal(i) {
+    if (i == 1) {
+      return '1st';
+    } else if (i == 2) {
+      return '2nd';
+    } else if (i == 3) {
+      return '3rd';
+    } else {
+      return i.toString() + 'th';
+    }
+  }
+
   connectToWebSocket() {
     this.wsclient = new W3CWebSocket(config.APIURL);
 
@@ -273,13 +285,26 @@ class App extends React.Component {
       console.log(data);
       if ('error' in data) {
         this.addToScroll(data.error, "error");
+        this.setState({error: data.error});
       } else {
         this.setState(data);
       }
       if ('message' in data) {
         this.addToScroll(data.message);
       }
-      if ('gameover' in data) {
+      if ('scores' in data) {
+        for (var i=0;i<data.scores.length;i++) {
+          var winners = [];
+          data.scores[i][0].forEach(playernum => {
+            winners.push(data.players[playernum].name);
+          });
+
+          var groups = data.scores[i][1];
+          var captures = data.scores[i][2];
+          this.addToScroll(this.intToOrdinal(i+1) + ' place: ' + winners.join(', ')
+           + ' with ' + groups.toString() + ' groups and '
+           + captures.toString() + ' captured tiles');
+        }
         return;
       }
       if ('nextplayer' in data) {
@@ -452,7 +477,7 @@ class App extends React.Component {
           <Scroll items={this.state.scroll}
                   nextPlayerName={nextPlayer}
                   nextPlayerNumber={this.state.nextplayer}
-                  gameOver={this.state.gameover} />
+                  gameOver={'scores' in this.state} />
           </div>
           <Rack tiles={this.state.rack} playernum={myplayernum}
            tilesLeft={this.state.tilesleft}
@@ -472,10 +497,10 @@ class App extends React.Component {
          />
         </div>
       );
-    } else if ('message' in this.state) {
+    } else if ('error' in this.state) {
       return (
         <div className="App">
-          <span id="error">{this.state.message}</span>
+          <span id="error">{this.state.error}</span>
         </div>
       );
     } else {

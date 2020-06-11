@@ -50,24 +50,21 @@ def score_game(board, players):
   players = p2
 
   groups = find_groups(board)
-  fewest_groups = 99
-  fewest_captured = 99
-  winners = []
-  for pnum in groups:
-    if (len(groups[pnum]) == fewest_groups
-    and len(players[pnum]['captured']) == fewest_captured):
-      winners.append(pnum)
 
-    if (len(groups[pnum]) < fewest_groups
-    or (len(groups[pnum]) == fewest_groups
-    and len(players[pnum]['captured']) < fewest_captured)):
-      winners = [pnum]
-      fewest_groups = len(groups[pnum])
-      fewest_captured = len(players[pnum]['captured'])
-  names = []
-  for pnum in winners:
-    names.append(players[pnum]['name'])
-  return {'winners': names, 'groups': fewest_groups, 'captured': fewest_captured}
+  scores = []
+  for authtoken in players:
+    scores.append([len(groups[pnum]) + len(players[pnum]['captured'])/100, pnum])
+  scores = sorted(scores)
+
+  last = -1
+  ranking = []
+  for i in range(len(scores)):
+    if scores[i][0] == last:
+      ranking[len(ranking)-1][0].append(scores[i][1])
+    else:
+      ranking.append([[scores[i][1]], round(scores[i][0]), round((scores[i][0]-round(scores[i][0]))*100)])
+      last = scores[i][0]
+  return ranking
 
 def get_game_state(gid, s3):
   objects = s3.list_objects_v2(Bucket=os.environ['S3_BUCKET_NAME'], Prefix=gid)
@@ -143,8 +140,8 @@ def prepare_player_state(state, myat):
     ret['board'] = state['board']
     ret['nextplayer'] = state['nextplayer']
     ret['tilesleft'] = len(state['players'][myat]['tiles'])
-  if 'gameover' in state:
-    ret['gameover'] = state['gameover']
+  if 'scores' in state:
+    ret['scores'] = state['scores']
   if 'message' in state:
     ret['message'] = state['message']
 
@@ -201,7 +198,7 @@ def lambda_handler(event, context):
 
   if state is None:
     state = create_game(gameid, s3)
-  elif 'gameover' in state:
+  elif 'score' in state:
     if not authtoken in state['players']:
       ws.error('you are not in this game')
       return {'statusCode': 200}
@@ -273,13 +270,7 @@ def lambda_handler(event, context):
         gameover = False
         break
     if gameover:
-      score = score_game(state['board'], state['players'])
-      if len(score['winners']) == 1:
-        state['message'] = score['winners'][0] + ' wins'
-      else:
-        state['message'] = "It's a tie! " + ', '.join(score['winners']) + ' win'
-      state['message'] += ' with ' + str(score['groups']) + ' group(s) and ' + str(score['captured']) + ' captured tile(s)'
-      state['gameover'] = True
+      state['scores'] = score_game(state['board'], state['players'])
     update_game(state, gameid, s3)
 
     for pat in state['players']:
