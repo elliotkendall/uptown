@@ -10,10 +10,13 @@ class WebSocketMessenger:
   def send_message(self, message, cid=None):
     if cid is None:
       cid = self.cid
-    self.client.post_to_connection(Data=json.dumps(message).encode(), ConnectionId=cid)
+    try:
+      self.client.post_to_connection(Data=json.dumps(message).encode(), ConnectionId=cid)
+    except selt.client.exceptions.GoneException:
+      return False
 
   def error(self, message):
-    self.send_message({'error': message})
+    return self.send_message({'error': message})
 
 def find_groups(board):
   groups = {}
@@ -52,7 +55,7 @@ def score_game(board, players):
   groups = find_groups(board)
 
   scores = []
-  for authtoken in players:
+  for pnum in players:
     scores.append([len(groups[pnum]) + len(players[pnum]['captured'])/100, pnum])
   scores = sorted(scores)
 
@@ -317,6 +320,8 @@ def lambda_handler(event, context):
       return {'statusCode': 200}
     # Remove as a player, add as a watcher
     del state['players'][authtoken]
+    if not 'watchers' in state:
+      state['watchers'] = {}
     state['watchers'][authtoken] = {'cid': cid}
     update_game(state, gameid, s3)
     # Send notifications
