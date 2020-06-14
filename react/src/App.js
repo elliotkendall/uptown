@@ -54,6 +54,9 @@ class Square extends React.Component {
     if (this.props.label === "true") {
       classes += " label";
     }
+    if ("latest" in this.props) {
+      classes += " latest";
+    }
     if ("className" in this.props) {
       classes += " " + this.props.className;
     }
@@ -94,6 +97,9 @@ class Board extends React.Component {
             // Tile
             props.symbol = this.props.tiles[id][1];
             props.player = this.props.tiles[id][0];
+            if (this.props.latest.includes(id)) {
+              props.latest = true;
+            }
           }
           id++;
           ret.push(React.createElement(Square, props));
@@ -445,7 +451,11 @@ class App extends React.Component {
       let opponents = [];
       let captured = [];
       let myplayernum = -1;
+      let latest = [];
       for (const [playernum, attrs] of Object.entries(this.state.players)) {
+        if ('last' in attrs) {
+          latest.push(attrs.last);
+        }
         if ('self' in attrs) {
           captured = attrs.captured;
           myplayernum = playernum;
@@ -473,7 +483,7 @@ class App extends React.Component {
           {opponents}
           </div>
           <div id="middle">
-          <Board tiles={this.state.board} playTile={this.playTile} />
+          <Board tiles={this.state.board} latest={latest} playTile={this.playTile} />
           <Scroll items={this.state.scroll}
                   nextPlayerName={nextPlayer}
                   nextPlayerNumber={this.state.nextplayer}

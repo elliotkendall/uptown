@@ -173,6 +173,7 @@ span.error {
 span.yourturn {
   animation:blinkingText .7s infinite;
   animation-direction: alternate;
+  animation-timing-function: ease-in-out;
 }
 
 @keyframes blinkingText{
@@ -180,25 +181,32 @@ span.yourturn {
   to {color: white;}
 }
 
-div.player1, span.player1 {
-  background-color: #c5f0f9;
+div.board div.latest {
+  animation-duration: .7s;
+  animation-iteration-count: infinite;
+  animation-direction: alternate-reverse;
+  animation-timing-function: ease-in-out;
 }
 
-div.player2, span.player2 {
-  background-color: #ffff8b;
-}
+div.player1, span.player1 {background-color: #c5f0f9;}
+@keyframes latestp1 {to   {background-color: #a5d0d9;}}
+div.board div.latest.player1 {animation-name: latestp1;}
 
-div.player3, span.player3 {
-  background-color: #c8e6c8;
-}
+div.player2, span.player2 {background-color: #ffff8b;}
+@keyframes latestp2 {to   {background-color: #dfdf6b;}}
+div.board div.latest.player2 {animation-name: latestp2;}
 
-div.player4, span.player4 {
-  background-color: #f03f84;
-}
+div.player3, span.player3 {background-color: #c8e6c8;}
+@keyframes latestp3 {to   {background-color: #a8c6a8;}}
+div.board div.latest.player3 {animation-name: latestp3;}
 
-div.player5, span.player5 {
-  background-color: #f28c60;
-}
+div.player4, span.player4 {background-color: #f03f84;}
+@keyframes latestp4 {to   {background-color: #d01f64;}}
+div.board div.latest.player4 {animation-name: latestp4;}
+
+div.player5, span.player5 {background-color: #f28c60;}
+@keyframes latestp5 {to   {background-color: #d26c40;}}
+div.board div.latest.player5 {animation-name: latestp5;}
 
 div.square:after {
   content: "";
