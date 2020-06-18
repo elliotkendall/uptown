@@ -101,6 +101,18 @@ class Board extends React.Component {
               props.latest = true;
             }
           }
+          let classes = [];
+          if ((id + 7) % 9 == 0 || (id + 4) % 9 == 0) {
+            classes.push("rightline");
+          } else if ((id + 6) % 9 == 0 || (id + 3) % 9 == 0) {
+            classes.push("leftline");
+          }
+          if ((17 < id && id < 27) || (44 < id && id < 54)) {
+            classes.push("bottomline");
+          } else if ((26 < id && id < 36) || (53 < id && id < 63)) {
+            classes.push("topline");
+          }
+          props.className = classes.join(" ");
           id++;
           ret.push(React.createElement(Square, props));
         }
