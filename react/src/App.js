@@ -102,9 +102,9 @@ class Board extends React.Component {
             }
           }
           let classes = [];
-          if ((id + 7) % 9 == 0 || (id + 4) % 9 == 0) {
+          if ((id + 7) % 9 === 0 || (id + 4) % 9 === 0) {
             classes.push("rightline");
-          } else if ((id + 6) % 9 == 0 || (id + 3) % 9 == 0) {
+          } else if ((id + 6) % 9 === 0 || (id + 3) % 9 === 0) {
             classes.push("leftline");
           }
           if ((17 < id && id < 27) || (44 < id && id < 54)) {
