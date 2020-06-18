@@ -12,7 +12,7 @@ class WebSocketMessenger:
       cid = self.cid
     try:
       self.client.post_to_connection(Data=json.dumps(message).encode(), ConnectionId=cid)
-    except selt.client.exceptions.GoneException:
+    except self.client.exceptions.GoneException:
       return False
 
   def error(self, message):
@@ -327,7 +327,8 @@ def lambda_handler(event, context):
     # Send notifications
     for ptype in ['watchers', 'players']:
       for authtoken in state[ptype]:
-        ws.send_message(prepare_player_state(state, authtoken), state[ptype]['cid'])
+        if 'cid' in state[ptype]:
+          ws.send_message(prepare_player_state(state, authtoken), state[ptype]['cid'])
     return {'statusCode': 200}
   ### START ###
   elif message['action'] == 'start':
