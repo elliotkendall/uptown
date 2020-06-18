@@ -175,10 +175,16 @@ class CreateInterface extends React.Component {
   render() {
     return (
       <>
-      <span id="title">Welcome to Uptown!</span>
+      <span id="title">Welcome to Uptown</span>
+      <p>
+      Please enter an identifier to create or join a game.  This identifier
+      can be just about anything, like a word or short phrase, and is case
+      sensitive.  You can the people you want to play with should all use
+      the same identifier.
+      </p>
       <form onSubmit={this.props.onClick}>
       <input id="gameid" type="text"
-       placeholder="Please enter a game identifier"
+       placeholder="Enter a game identifier"
        autoFocus="autofocus" />
       <input type="submit" value="Create or join game" />
       </form>
@@ -188,6 +194,12 @@ class CreateInterface extends React.Component {
 }
 
 class JoinInterface extends React.Component {
+  checkEnter(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      this.props.join();
+    }
+  }
   render() {
     let players = [];
     let hasSelf = 0;
@@ -203,7 +215,10 @@ class JoinInterface extends React.Component {
     }
     if (! hasSelf) {
       players.push(<div key="addself">
-        <input id="joinname" placeholder="Enter your name" />
+        <input id="joinname"
+               placeholder="Enter your name"
+               onKeyDown={(event) => {if (event.key === "Enter") { event.preventDefault(); this.props.join();}}}
+               autoFocus="autofocus" />
         <input type="button" value="Join" onClick={this.props.join} />
       </div>);
     }
@@ -211,16 +226,23 @@ class JoinInterface extends React.Component {
     if (this.props.message !== "") {
       message = <span>{this.props.message}</span>;
     }
+    let buttonProps = {};
+    let buttonLabel = "Start game"
+    if (players.length < 3) {
+      buttonProps.disabled = true;
+      buttonLabel = "Minimum three players required";
+    }
     return (
       <form id="join">
-      <span>Waiting to start game...</span>
+      <span id="title">Waiting for players to join...</span>
       {message}
       {players}
-      <input type="button" id="startbutton" value="Start game" onClick={this.props.startGame} />
+      <input type="button" id="startbutton" value={buttonLabel}
+       {...buttonProps}
+       onClick={this.props.startGame} />
       </form>
     );
   }
-
 }
 
 class Scroll extends React.Component {
@@ -268,11 +290,15 @@ class App extends React.Component {
 
   connectToWebSocket() {
     this.wsclient = new W3CWebSocket(config.APIURL);
+    this.setState({connected: false});
 
     this.wsclient.onopen = () => {
       console.log('WebSocket Client Connected');
-      this.addToScroll("Welcome to Uptown");
-      if (this.state.gameid !== null) {
+      this.setState({connected: true});
+      if (this.state.queued !== null) {
+        console.log('Sending queued message');
+        this.wsclient.send(this.state.queued);
+      } else if (this.state.gameid !== null) {
         this.wsclient.send(JSON.stringify({
           "gameid": this.state.gameid,
           "authtoken": this.state.authtoken,
@@ -339,11 +365,11 @@ class App extends React.Component {
 
   constructor(props) {
     super(props);
-    if (window.location.search === "") {
-      this.state = { gameid: null, scroll: []};
-    } else {
-      this.state = { gameid: window.location.search.substring(1), scroll: [] };
+    let state = { gameid: null, queued: null, scroll: []};
+    if (window.location.search !== "") {
+      state.gameid = window.location.search.substring(1);
     }
+    this.state = state;
 
     this.createHandler = this.createHandler.bind(this);
     this.joinGame = this.joinGame.bind(this);
@@ -374,7 +400,7 @@ class App extends React.Component {
   }
 
   startGame() {
-    this.wsclient.send(JSON.stringify({
+    this.wsSendMessage(JSON.stringify({
       "gameid": this.state.gameid,
       "authtoken": this.state.authtoken,
       "action": "start"
@@ -382,7 +408,7 @@ class App extends React.Component {
   }
 
   joinGame() {
-    this.wsclient.send(JSON.stringify({
+    this.wsSendMessage(JSON.stringify({
       "gameid": this.state.gameid,
       "authtoken": this.state.authtoken,
       "action": "join",
@@ -391,11 +417,27 @@ class App extends React.Component {
   }
 
   leaveGame() {
-    this.wsclient.send(JSON.stringify({
+    this.wsSendMessage(JSON.stringify({
       "gameid": this.state.gameid,
       "authtoken": this.state.authtoken,
       "action": "leave"
     }));
+  }
+
+  wsSendMessage(message) {
+    console.log("WS socket state is: " + this.wsclient.readyState);
+    if (this.wsclient.readyState === 0) {
+      // Connecting
+      this.setState({queued: message});
+    } else if (this.wsclient.readyState === 1) {
+      // Connected
+      this.wsclient.send(message);
+    } else {
+      // Closed/closing
+      console.log("Websocket connection closed; reconnecting");
+      this.setState({queued: message});
+      this.connectToWebSocket();
+    }
   }
 
   playTile(location) {
@@ -414,13 +456,9 @@ class App extends React.Component {
       "tile": tiles[0].textContent,
       "location": location
     });
-    if (this.wsclient.readyState !== 1) {
-      console.log("Websocket connection closed; reconnecting");
-      this.connectToWebSocket();
-    }
     console.log("Sending move");
     console.log(message);
-    this.wsclient.send(message);
+    this.wsSendMessage(message);
     this.clearHighlightedTile();
   }
 
