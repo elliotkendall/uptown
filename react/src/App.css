@@ -146,6 +146,7 @@ div#rack {
   justify-content: center;
   flex-wrap: wrap;
   display: flex;
+  user-select: none;
 }
 
 div#rack div.square {
@@ -171,6 +172,7 @@ div.board {
   padding-top: 1%;
   flex-wrap: wrap;
   display: flex;
+  user-select: none;
 }
 
 div.square {
