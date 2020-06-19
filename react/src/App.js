@@ -191,7 +191,7 @@ class CreateInterface extends React.Component {
       <p>
       Please enter an identifier to create or join a game.  This identifier
       can be just about anything, like a word or short phrase, and is case
-      sensitive.  You can the people you want to play with should all use
+      sensitive.  You and the people you want to play with should all use
       the same identifier.
       </p>
       <form onSubmit={this.props.onClick}>
