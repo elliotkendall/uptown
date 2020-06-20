@@ -5,6 +5,110 @@ import Cookies from 'universal-cookie';
 import { v4 as uuidv4 } from 'uuid';
 import * as config from './config.js';
 
+class CloseButton extends React.Component {
+  render() {
+    return (
+      <div id="closebutton">
+        <span onClick={this.props.onClick}>X</span>
+      </div>
+    );
+  }
+}
+
+class AboutBox extends React.Component {
+  render() {
+    return (
+      <div id="dim">
+      <div id="about">
+      <CloseButton onClick={this.props.hideAbout}/>
+      <h2>How to Play Uptown</h2>
+      <h3>Objective</h3>
+      <p>
+      The goal of Uptown is to place your colored tiles in such a way that
+      at the end of the game, they're connected in as few <em>groups</em> as
+      possible.  A group is a collection of tiles which are all touching at
+      least one other member of the group on at least one side (not just on
+      a corner).
+      </p>
+      <p>
+      If one or more players has the same number of groups at the end of
+      the game, the player who has <em>captured</em> the fewest of their
+      opponents' tiles wins. See below for more about capturing.
+      </p>
+
+      <h3>Playing the Game</h3>
+      <p>
+
+      Below the board you can see the five tiles that are in your rack and
+      available to place. On your turn, click one of these tiles, then click
+      the space on the board where you want to place it. To be a legal
+      move, the tile you're playing must match the board space where you're
+      trying to place it. You can only place tiles with a letter on them
+      (A-F) in the row with a matching label. You can only place tiles with
+      a number (1-9) in the matching column. You can only place tiles with
+      a symbol in the area of the board with matching symbols on it. The
+      dollar sign ($) tile is wild and you can place it anywhere.
+
+      </p>
+      <p>
+      Your supply includes one tile of each letter, number, and symbol.  The
+      game ends when each player has drawn all of their tiles and placed all
+      but four. Therefore, you there are four tiles you will not need to
+      play. You can see how many tiles are left for you to draw by looking
+      at the number on top of the stack to the right of your rack of tiles.
+      </p>
+
+      <h3>Capturing</h3>
+      <p>
+      If you wish to place a tile on a square where an opponent has already
+      placed one of their tiles, you may do so. However, you may not
+      split an opponent's tiles into more groups than they already had.
+      You may also never capture one of your own tiles.
+      </p>
+
+      <p>
+
+      You can see any tiles that your opponents have captured displayed below
+      their names. Tiles that you have captured appear below your rack
+      of tiles. At the end of the game, the player with fewest captured tiles
+      wins in the case of a tie.
+
+      </p>
+
+      <h2>About This Site</h2>
+      <p>
+
+      Uptown runs on <a href="https://aws.amazon.com/">Amazon Web
+      Services</a> using <a
+      href="https://aws.amazon.com/lambda/">Lambda</a>, <a
+      href="https://aws.amazon.com/api-gateway/">API Gateway</a>, and <a
+      href="https://aws.amazon.com/s3/">S3</a>.  The frontend is <a
+      href="https://reactjs.org/">React</a> and the backend is <a
+      href="https://www.python.org/">Python</a>.  It is <a
+      href="https://www.gnu.org/philosophy/free-sw.html">free software</a>. 
+      Please contribute bug reports and patches on <a
+      href="https://github.com/elliotkendall/uptown">GitHub</a>!
+
+      </p>
+
+      <p>
+      Copyright &copy; {new Date().getFullYear()} Elliot Kendall
+      </p>
+      
+      </div>
+      </div>
+    );
+  }
+}
+
+class AboutButton extends React.Component {
+  render() {
+    return (
+      <div id="aboutbutton" onClick={this.props.onClick}><span>?</span></div>
+    );
+  }
+}
+
 class Square extends React.Component {
   constructor(props) {
     super(props);
@@ -377,7 +481,7 @@ class App extends React.Component {
 
   constructor(props) {
     super(props);
-    let state = { gameid: null, queued: null, scroll: []};
+    let state = { gameid: null, queued: null, scroll: [], showAbout: false};
     if (window.location.search !== "") {
       state.gameid = window.location.search.substring(1);
     }
@@ -389,6 +493,8 @@ class App extends React.Component {
     this.startGame = this.startGame.bind(this);
     this.playTile = this.playTile.bind(this);
     this.setHighlightedTile = this.setHighlightedTile.bind(this);
+    this.showAbout = this.showAbout.bind(this);
+    this.hideAbout = this.hideAbout.bind(this);
   }  
 
   addToScroll(message, type = null) {
@@ -488,12 +594,26 @@ class App extends React.Component {
     this.setState({"highlighted": null});
   }
 
+  showAbout() {
+    this.setState({"showAbout": true});
+  }
+
+  hideAbout() {
+    this.setState({"showAbout": false});
+  }
+
   render() {
+    let about = null;
+    if (this.state.showAbout) {
+      about = (<AboutBox hideAbout={this.hideAbout} />);
+    }
     if (this.state.gameid == null) {
       // We need to create/join a game
       return (
         <div className="App">
           <CreateInterface onClick={this.createHandler}/>
+          <AboutButton onClick={this.showAbout} />
+          {about}
         </div>
       );    
     } else if ('board' in this.state) {
@@ -543,6 +663,7 @@ class App extends React.Component {
            tilesLeft={this.state.tilesleft}
            setHighlight={this.setHighlightedTile} />
           <Captured tiles={captured} />
+          <AboutButton onClick={this.showAbout} />
         </div>
       );
     } else if ('players' in this.state) {
@@ -555,6 +676,7 @@ class App extends React.Component {
          startGame={this.startGame}
          message={this.state.message}
          />
+        <AboutButton onClick={this.showAbout} />
         </div>
       );
     } else if ('error' in this.state) {
