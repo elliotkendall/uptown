@@ -7,6 +7,10 @@
 
 }
 
+form#join {
+    font-size: 1.2vw;
+}
+
 h2, h3 {
   font-family: 'broadwayregular';
   font-weight: normal;
@@ -115,7 +119,7 @@ div#middle {
 }
 
 div#scroll {
-  margin-top: 1%;
+  margin: 1%;
   padding: 1%;
   height: 21.3em;
   font-size: 1.5vw;
@@ -260,9 +264,13 @@ div#rack div.tilesleft div.content {
 div.board {
   width: 40%;
   padding-top: 1%;
-  flex-wrap: wrap;
-  display: flex;
   user-select: none;
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+}
+
+div.board div.square {
+  width: auto;
 }
 
 div.square {
