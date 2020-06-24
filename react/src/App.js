@@ -521,7 +521,8 @@ class App extends React.Component {
     this.setState({scroll: scroll});
   }
 
-  createHandler() {
+  createHandler(e) {
+    e.preventDefault();
     let gameid = document.getElementById('gameid').value;
     this.setState({
       gameid: gameid
