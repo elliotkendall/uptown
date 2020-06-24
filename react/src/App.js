@@ -164,9 +164,15 @@ class Square extends React.Component {
     if ("className" in this.props) {
       classes += " " + this.props.className;
     }
+    let char;
+    if (this.props.symbol in config.EMOJI) {
+      char = config.EMOJI[this.props.symbol];
+    } else {
+      char = this.props.symbol;
+    }
     return (
-      <div className={classes} onClick={clickHandler} >
-        <div className="content">{this.props.symbol}</div>
+      <div className={classes} onClick={clickHandler} symbol={this.props.symbol}>
+        <div className="content">{char}</div>
       </div>
     );
   }
@@ -322,8 +328,7 @@ class JoinInterface extends React.Component {
     for (const [playernum, attrs] of Object.entries(this.props.players)) {
       if ('self' in attrs) {
         hasSelf = 1;
-        players.push(<span key={playernum} className="player self">Player {playernum}: {attrs['name']} (YOU)
-         <input type="button" id="leavebutton" value="leave game" onClick={this.props.leave} />
+        players.push(<span key={playernum} className="player self">Player {playernum}: {attrs['name']} (YOU) <input type="button" id="leavebutton" value="leave game" onClick={this.props.leave} />
         </span>);
       } else {
         players.push(<span key={playernum} className="player">Player {playernum}: {attrs['name']}</span>);
@@ -461,8 +466,15 @@ class App extends React.Component {
           lastplayer = Object.keys(data.players).length;
         }
         if ("last" in data.players[lastplayer]) {
-          this.addToScroll(data.players[lastplayer].name + ' plays '
-           + data.board[data.players[lastplayer].last][1], 'player' + lastplayer);
+          let symbol;
+          if (data.board[data.players[lastplayer].last][1] in config.EMOJI) {
+            symbol = config.EMOJI[data.board[data.players[lastplayer].last][1]];
+          } else {
+            symbol = data.board[data.players[lastplayer].last][1];
+          }
+          this.addToScroll(
+           data.players[lastplayer].name + ' plays ' + symbol,
+           'player' + lastplayer);
         }
       }
     };
@@ -571,7 +583,7 @@ class App extends React.Component {
       "gameid": this.state.gameid,
       "authtoken": this.state.authtoken,
       "action": "move",
-      "tile": tiles[0].textContent,
+      "tile": tiles[0].getAttribute('symbol'),
       "location": location
     });
     console.log("Sending move");
@@ -653,7 +665,8 @@ class App extends React.Component {
           {opponents}
           </div>
           <div id="middle">
-          <Board tiles={this.state.board} latest={latest} playTile={this.playTile} />
+          <Board tiles={this.state.board} latest={latest}
+           playTile={this.playTile} />
           <Scroll items={this.state.scroll}
                   nextPlayerName={nextPlayer}
                   nextPlayerNumber={this.state.nextplayer}
