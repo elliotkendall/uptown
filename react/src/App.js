@@ -676,6 +676,7 @@ class App extends React.Component {
            setHighlight={this.setHighlightedTile} />
           <Captured tiles={captured} />
           <AboutButton onClick={this.showAbout} />
+          {about}
         </div>
       );
     } else if ('players' in this.state) {
@@ -689,6 +690,7 @@ class App extends React.Component {
          message={this.state.message}
          />
         <AboutButton onClick={this.showAbout} />
+        {about}
         </div>
       );
     } else if ('error' in this.state) {
