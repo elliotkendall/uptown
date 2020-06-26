@@ -304,12 +304,11 @@ class CreateInterface extends React.Component {
       sensitive.  You and the people you want to play with should all use
       the same identifier.
       </p>
-      <form onSubmit={this.props.onClick}>
       <input id="gameid" type="text"
        placeholder="Enter a game identifier"
+       onKeyDown={(event) => {if (event.key === "Enter") { event.preventDefault(); this.props.onClick();}}}
        autoFocus="autofocus" />
-      <input type="submit" value="Create or join game" />
-      </form>
+      <input type="submit" value="Create or join game" onClick={this.props.onClick}/>
       </>
     );
   }
@@ -521,8 +520,7 @@ class App extends React.Component {
     this.setState({scroll: scroll});
   }
 
-  createHandler(e) {
-    e.preventDefault();
+  createHandler() {
     let gameid = document.getElementById('gameid').value;
     this.setState({
       gameid: gameid
