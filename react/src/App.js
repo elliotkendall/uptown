@@ -300,9 +300,9 @@ class CreateInterface extends React.Component {
       <span id="title">Welcome to Uptown</span>
       <p>
       Please enter an identifier to create or join a game.  This identifier
-      can be just about anything, like a word or short phrase, and is case
-      sensitive.  You and the people you want to play with should all use
-      the same identifier.
+      can be just about anything, like a word or short phrase, and
+      capitalization doesn't matter.  You and the people you want to play
+      with should all use the same identifier.
       </p>
       <input id="gameid" type="text"
        placeholder="Enter a game identifier"

@@ -195,7 +195,7 @@ def lambda_handler(event, context):
       return {'statusCode': 200}
 
   s3 = boto3.client('s3')
-  gameid = message['gameid']
+  gameid = message['gameid'].lower()
   authtoken = message['authtoken']
   state = get_game_state(gameid, s3)
 
