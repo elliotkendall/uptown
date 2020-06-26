@@ -1,6 +1,7 @@
 import json
 import boto3
 import os
+import random
 
 class WebSocketMessenger:
   def __init__(self, client, cid):
@@ -86,7 +87,6 @@ def update_game(state, gid, s3):
   s3.put_object(Body=json.dumps(state), Key=gid + '.json', Bucket=os.environ['S3_BUCKET_NAME'])
 
 def shuffle_tiles():
-  import random
   tiles = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', '~', '!', '@', '#', '%', '^', '&', '*', '?', '$']
   random.shuffle(tiles)
   return tiles
@@ -349,7 +349,13 @@ def lambda_handler(event, context):
     state['board'] = [None] * 81
 
     state['nextplayer'] = 1
-    for pat in state['players']:
+    # Randomize player order
+    pats = list(state['players'].keys())
+    random.shuffle(pats)
+    nextnum = 1
+    for pat in pats:
+      state['players'][pat]['playernum'] = nextnum
+      nextnum += 1
       state['players'][pat]['captured'] = []
       state['players'][pat]['tiles'] = shuffle_tiles()
       state['players'][pat]['rack'] = []
