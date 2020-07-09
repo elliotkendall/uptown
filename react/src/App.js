@@ -44,7 +44,7 @@ class AboutBox extends React.Component {
       the space on the board where you want to place it. To be a legal
       move, the tile you're playing must match the board space where you're
       trying to place it. You can only place tiles with a letter on them
-      (A-F) in the row with a matching label. You can only place tiles with
+      (A-I) in the row with a matching label. You can only place tiles with
       a number (1-9) in the matching column. You can only place tiles with
       a symbol in the area of the board with matching symbols on it. The
       dollar sign ($) tile is wild and you can place it anywhere.
